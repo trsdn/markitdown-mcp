@@ -6,7 +6,7 @@ file formats to Markdown using Microsoft's MarkItDown library.
 
 Supported formats include:
 - Office documents (PDF, DOCX, PPTX, XLSX)
-- Images with OCR (JPG, PNG, GIF, BMP, TIFF, WebP) 
+- Images with OCR (JPG, PNG, GIF, BMP, TIFF, WebP)
 - Audio with speech recognition (MP3, WAV, FLAC, M4A, OGG, WMA)
 - Web/markup files (HTML, HTM)
 - Data formats (CSV, JSON, XML)

@@ -45,7 +45,7 @@ def sample_text_file(temp_dir):
     """Create a sample text file for testing."""
     file_path = Path(temp_dir) / "sample.txt"
     content = "Hello, World!\nThis is a test file.\nWith multiple lines."
-    file_path.write_text(content, encoding='utf-8')
+    file_path.write_text(content, encoding="utf-8")
     return str(file_path)
 
 
@@ -57,12 +57,9 @@ def sample_json_file(temp_dir):
         "name": "Test Document",
         "type": "test",
         "data": [1, 2, 3, 4, 5],
-        "metadata": {
-            "created": "2024-01-01",
-            "author": "Test Suite"
-        }
+        "metadata": {"created": "2024-01-01", "author": "Test Suite"},
     }
-    file_path.write_text(json.dumps(content, indent=2), encoding='utf-8')
+    file_path.write_text(json.dumps(content, indent=2), encoding="utf-8")
     return str(file_path)
 
 
@@ -75,7 +72,7 @@ John Doe,25,New York,USA
 Jane Smith,30,London,UK
 Bob Johnson,35,Toronto,Canada
 Alice Brown,28,Sydney,Australia"""
-    file_path.write_text(content, encoding='utf-8')
+    file_path.write_text(content, encoding="utf-8")
     return str(file_path)
 
 
@@ -103,7 +100,7 @@ def sample_html_file(temp_dir):
     </table>
 </body>
 </html>"""
-    file_path.write_text(content, encoding='utf-8')
+    file_path.write_text(content, encoding="utf-8")
     return str(file_path)
 
 
@@ -112,28 +109,24 @@ def sample_directory(temp_dir):
     """Create a directory with multiple test files."""
     base_path = Path(temp_dir) / "sample_docs"
     base_path.mkdir()
-    
+
     # Create various file types
     files = {
         "document1.txt": "First document content",
-        "document2.txt": "Second document content", 
+        "document2.txt": "Second document content",
         "data.json": '{"test": "data", "numbers": [1, 2, 3]}',
         "info.csv": "Name,Value\nTest,123\nDemo,456",
         "page.html": "<html><body><h1>Test Page</h1><p>Content</p></body></html>",
-        "readme.md": "# Test Readme\n\nThis is a test markdown file."
+        "readme.md": "# Test Readme\n\nThis is a test markdown file.",
     }
-    
+
     created_files = []
     for filename, content in files.items():
         file_path = base_path / filename
-        file_path.write_text(content, encoding='utf-8')
+        file_path.write_text(content, encoding="utf-8")
         created_files.append(str(file_path))
-    
-    return {
-        "directory": str(base_path),
-        "files": created_files,
-        "count": len(files)
-    }
+
+    return {"directory": str(base_path), "files": created_files, "count": len(files)}
 
 
 @pytest.fixture
@@ -150,7 +143,7 @@ def large_text_file(temp_dir):
     file_path = Path(temp_dir) / "large.txt"
     # Create 1MB of text content
     content = "This is a line of text for testing large file handling.\n" * 50000
-    file_path.write_text(content, encoding='utf-8')
+    file_path.write_text(content, encoding="utf-8")
     return str(file_path)
 
 
@@ -159,7 +152,7 @@ def unicode_filename_file(temp_dir):
     """Create a file with unicode characters in the name."""
     file_path = Path(temp_dir) / "测试文件_🚀_test.txt"
     content = "Unicode filename test content"
-    file_path.write_text(content, encoding='utf-8')
+    file_path.write_text(content, encoding="utf-8")
     return str(file_path)
 
 
@@ -176,7 +169,7 @@ def malicious_path_attempts():
         "/dev/null",
         "/proc/version",
         "file:///etc/passwd",
-        "\\x2e\\x2e/\\x2e\\x2e/etc/passwd"
+        "\\x2e\\x2e/\\x2e\\x2e/etc/passwd",
     ]
 
 
@@ -184,43 +177,28 @@ def malicious_path_attempts():
 def sample_base64_content():
     """Provide sample content encoded as base64."""
     content = "This is test content for base64 encoding tests.\nSecond line of content."
-    encoded = base64.b64encode(content.encode('utf-8')).decode('ascii')
-    return {
-        "original": content,
-        "encoded": encoded,
-        "filename": "test.txt"
-    }
+    encoded = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    return {"original": content, "encoded": encoded, "filename": "test.txt"}
 
 
 @pytest.fixture
 def mcp_initialize_request():
     """Standard MCP initialize request."""
-    return MCPRequest(
-        id="init-test",
-        method="initialize",
-        params={}
-    )
+    return MCPRequest(id="init-test", method="initialize", params={})
 
 
 @pytest.fixture
 def mcp_tools_list_request():
     """Standard MCP tools/list request."""
-    return MCPRequest(
-        id="tools-test",
-        method="tools/list", 
-        params={}
-    )
+    return MCPRequest(id="tools-test", method="tools/list", params={})
 
 
-def create_mcp_tool_request(tool_name: str, arguments: Dict[str, Any], request_id: str = "tool-test") -> MCPRequest:
+def create_mcp_tool_request(
+    tool_name: str, arguments: Dict[str, Any], request_id: str = "tool-test"
+) -> MCPRequest:
     """Helper to create MCP tool call requests."""
     return MCPRequest(
-        id=request_id,
-        method="tools/call",
-        params={
-            "name": tool_name,
-            "arguments": arguments
-        }
+        id=request_id, method="tools/call", params={"name": tool_name, "arguments": arguments}
     )
 
 
@@ -228,38 +206,33 @@ def create_mcp_tool_request(tool_name: str, arguments: Dict[str, Any], request_i
 def pytest_configure(config):
     """Configure custom pytest markers."""
     config.addinivalue_line("markers", "unit: Unit tests - fast, isolated")
-    config.addinivalue_line("markers", "integration: Integration tests - component interaction") 
+    config.addinivalue_line("markers", "integration: Integration tests - component interaction")
     config.addinivalue_line("markers", "performance: Performance tests - resource intensive")
     config.addinivalue_line("markers", "security: Security tests - vulnerability testing")
     config.addinivalue_line("markers", "compatibility: Cross-platform compatibility tests")
     config.addinivalue_line("markers", "slow: Tests that take more than 10 seconds")
-    config.addinivalue_line("markers", "requires_dependencies: Tests requiring optional dependencies")
+    config.addinivalue_line(
+        "markers", "requires_dependencies: Tests requiring optional dependencies"
+    )
 
 
 # Test utilities
 class MCPTestClient:
     """Mock MCP client for testing server responses."""
-    
+
     def __init__(self, server: MarkItDownMCPServer):
         self.server = server
         self.request_id_counter = 1
-    
+
     async def send_request(self, method: str, params: Dict[str, Any] = None) -> MCPResponse:
         """Send a request to the server and return the response."""
-        request = MCPRequest(
-            id=str(self.request_id_counter),
-            method=method,
-            params=params or {}
-        )
+        request = MCPRequest(id=str(self.request_id_counter), method=method, params=params or {})
         self.request_id_counter += 1
         return await self.server.handle_request(request)
-    
+
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> MCPResponse:
         """Call a specific tool and return the response."""
-        return await self.send_request("tools/call", {
-            "name": tool_name,
-            "arguments": arguments
-        })
+        return await self.send_request("tools/call", {"name": tool_name, "arguments": arguments})
 
 
 @pytest_asyncio.fixture
