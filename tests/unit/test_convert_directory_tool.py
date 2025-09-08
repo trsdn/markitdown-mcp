@@ -208,11 +208,11 @@ class TestConvertDirectoryComplexScenarios:
         # Assert successful response - some files may fail due to missing dependencies
         assert_mcp_success_response(response, "nested-dir-test")
         content_text = response.result["content"][0]["text"]
-        
+
         # Should contain conversion summary
         assert "conversion completed" in content_text.lower()
         assert "successfully converted:" in content_text.lower()
-        
+
         # Should have processed at least most of the files
         # (some binary formats might fail due to missing dependencies)
         assert complex_structure["total_files"] > 0
