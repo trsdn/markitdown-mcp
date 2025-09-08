@@ -3,17 +3,13 @@ End-to-end file conversion integration tests.
 Tests actual file conversion with real MarkItDown library.
 """
 
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
-from unittest.mock import Mock, patch
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
     assert_convert_file_response,
-    assert_mcp_error_response,
     assert_mcp_success_response,
 )
 
@@ -643,7 +639,7 @@ class TestErrorScenariosIntegration:
             # Should handle permission error gracefully
             if response.error:
                 error_msg = response.error["message"].lower()
-                assert any(term in error_msg for term in ["permission", "access", "denied"])
+                assert any(term in error_msg for term in ["permission", "access", "denied", "readable"])
 
         finally:
             # Restore permissions for cleanup

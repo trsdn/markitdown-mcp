@@ -2,9 +2,6 @@
 File utilities for testing MarkItDown MCP Server
 """
 
-import csv
-import io
-import json
 import random
 import shutil
 import string
@@ -77,11 +74,11 @@ endobj
 
 xref
 0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000079 00000 n 
-0000000173 00000 n 
-0000000301 00000 n 
+0000000000 65535 f
+0000000010 00000 n
+0000000079 00000 n
+0000000173 00000 n
+0000000301 00000 n
 trailer
 <<
 /Size 5

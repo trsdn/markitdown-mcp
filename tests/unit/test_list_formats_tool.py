@@ -2,14 +2,13 @@
 Unit tests for the list_supported_formats MCP tool
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+from markitdown_mcp.server import MCPRequest
 from tests.helpers.assertions import (
     assert_list_formats_response,
-    assert_mcp_error_response,
     assert_mcp_success_response,
 )
 
@@ -297,7 +296,8 @@ class TestListSupportedFormatsIntegration:
 
         assert coverage_ratio >= 0.8, (
             f"Format list should cover most supported extensions. "
-            f"Coverage: {coverage_ratio:.2%}, Server: {server_extensions}, Listed: {listed_extensions}"
+            f"Coverage: {coverage_ratio:.2%}, Server: {server_extensions}, "
+            f"Listed: {listed_extensions}"
         )
 
     @pytest.mark.unit

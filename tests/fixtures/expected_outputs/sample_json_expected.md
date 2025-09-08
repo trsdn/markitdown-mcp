@@ -5,7 +5,7 @@
   "description": "This is a sample JSON file for testing purposes",
   "features": [
     "JSON parsing",
-    "Data structure validation", 
+    "Data structure validation",
     "Unicode support"
   ]
 }

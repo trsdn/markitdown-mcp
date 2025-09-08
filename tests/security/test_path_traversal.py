@@ -4,15 +4,13 @@ Tests protection against path traversal attacks and unsafe file access.
 """
 
 import os
-import stat
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
+from tests.helpers.assertions import assert_mcp_error_response
 
 
 class PathTraversalTester:
@@ -465,7 +463,7 @@ class TestSymlinkAttacks:
                 has_sensitive = any(
                     indicator in content.lower() for indicator in sensitive_indicators
                 )
-                assert not has_sensitive, f"Symlink directory access leaked sensitive data"
+                assert not has_sensitive, "Symlink directory access leaked sensitive data"
             else:
                 # Rejection is the safer approach
                 assert result["error"] is not None
@@ -523,7 +521,7 @@ class TestRaceConditionAttacks:
 
         # All should either succeed consistently or fail safely
         successful_results = [r for r in results if not isinstance(r, Exception) and r["success"]]
-        failed_results = [r for r in results if not isinstance(r, Exception) and not r["success"]]
+        [r for r in results if not isinstance(r, Exception) and not r["success"]]
         exception_results = [r for r in results if isinstance(r, Exception)]
 
         # Should not have exceptions from concurrent access
@@ -612,7 +610,7 @@ class TestInformationDisclosure:
             # Multiple measurements for statistical significance
             for _ in range(3):
                 start_time = time.time()
-                result = await tester.test_malicious_path(path, f"timing-{case_name}")
+                await tester.test_malicious_path(path, f"timing-{case_name}")
                 end_time = time.time()
 
                 times.append(end_time - start_time)
@@ -632,7 +630,10 @@ class TestInformationDisclosure:
             # Timing difference should not be extreme (less than 10x)
             assert (
                 ratio < 10
-            ), f"Timing difference too large: {ratio:.2f}x (existing: {existing_time:.3f}s, nonexistent: {nonexistent_time:.3f}s)"
+            ), (
+                f"Timing difference too large: {ratio:.2f}x "
+                f"(existing: {existing_time:.3f}s, nonexistent: {nonexistent_time:.3f}s)"
+            )
 
 
 class TestPathNormalizationSecurity:

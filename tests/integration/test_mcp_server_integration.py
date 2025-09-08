@@ -8,11 +8,11 @@ import json
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
+from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
     assert_mcp_error_response,
     assert_mcp_success_response,

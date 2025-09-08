@@ -25,8 +25,6 @@ logger = logging.getLogger("markitdown-mcp")
 class SecurityError(Exception):
     """Raised when a security violation is detected."""
 
-    pass
-
 
 def validate_and_sanitize_path(
     file_path: str, allowed_dirs: Optional[List[str]] = None
@@ -244,12 +242,14 @@ class MarkItDownMCPServer:
                                         "file_content": {
                                             "type": "string",
                                             "description": (
-                                                "Base64 encoded file content (alternative to file_path)"
+                                                "Base64 encoded file content "
+                                                "(alternative to file_path)"
                                             ),
                                         },
                                         "filename": {
                                             "type": "string",
-                                            "description": "Original filename when using file_content",
+                                            "description": "Original filename when using "
+                                            "file_content",
                                         },
                                     },
                                     "anyOf": [
@@ -265,7 +265,8 @@ class MarkItDownMCPServer:
                             },
                             {
                                 "name": "convert_directory",
-                                "description": "Convert all supported files in a directory to Markdown",
+                                "description": "Convert all supported files in a "
+                                "directory to Markdown",
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
@@ -275,7 +276,8 @@ class MarkItDownMCPServer:
                                         },
                                         "output_directory": {
                                             "type": "string",
-                                            "description": "Path to the output directory (optional)",
+                                            "description": "Path to the output directory "
+                                            "(optional)",
                                         },
                                     },
                                     "required": ["input_directory"],
@@ -365,7 +367,8 @@ class MarkItDownMCPServer:
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Successfully converted {validated_path.name} to Markdown:\n\n{markdown_content}",
+                                "text": f"Successfully converted {validated_path.name} to "
+                                f"Markdown:\n\n{markdown_content}",
                             }
                         ]
                     },
@@ -394,7 +397,8 @@ class MarkItDownMCPServer:
                                 "content": [
                                     {
                                         "type": "text",
-                                        "text": f"Successfully converted {filename} to Markdown:\n\n{markdown_content}",
+                                        "text": f"Successfully converted {filename} to "
+                                        f"Markdown:\n\n{markdown_content}",
                                     }
                                 ]
                             },
@@ -477,7 +481,8 @@ class MarkItDownMCPServer:
                     arguments["input_directory"], self.safe_directories
                 )
                 logger.info(
-                    f"Validated input directory: {arguments['input_directory']} -> {validated_input_dir}"
+                    f"Validated input directory: {arguments['input_directory']} -> "
+                    f"{validated_input_dir}"
                 )
             except SecurityError as e:
                 logger.warning(f"Security violation blocked for directory: {e}")
@@ -493,7 +498,8 @@ class MarkItDownMCPServer:
                         arguments["output_directory"], self.safe_directories
                     )
                     logger.info(
-                        f"Validated output directory: {arguments['output_directory']} -> {validated_output_dir}"
+                        f"Validated output directory: {arguments['output_directory']} -> "
+                        f"{validated_output_dir}"
                     )
                 except SecurityError as e:
                     logger.warning(f"Security violation blocked for output directory: {e}")

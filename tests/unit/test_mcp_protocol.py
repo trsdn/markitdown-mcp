@@ -3,8 +3,7 @@ Unit tests for MCP protocol handling in MarkItDown MCP Server
 """
 
 import json
-from typing import Any, Dict
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -13,7 +12,6 @@ from tests.helpers.assertions import (
     assert_mcp_error_response,
     assert_mcp_success_response,
     assert_valid_json_rpc_response,
-    assert_valid_mcp_response,
 )
 
 

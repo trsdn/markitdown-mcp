@@ -4,17 +4,15 @@ Tests server behavior with different dependency configurations and versions.
 """
 
 import importlib
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, patch
+from typing import Any, Dict
+from unittest.mock import patch
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
+from tests.helpers.assertions import assert_mcp_success_response
 
 
 class DependencyTester:
@@ -194,7 +192,7 @@ class TestOptionalDependencies:
     @pytest.mark.asyncio
     async def test_missing_optional_dependencies(self, temp_dir):
         """Test behavior when optional dependencies are missing."""
-        tester = DependencyTester()
+        DependencyTester()
 
         # Test with potentially missing optional dependencies
         optional_deps = [
@@ -330,15 +328,8 @@ class TestDependencyIsolation:
         """Test that server doesn't conflict with user's namespace."""
         server = MarkItDownMCPServer()
 
-        # Simulate potential naming conflicts
-        test_conflicts = [
-            # Variable names that might conflict
-            "json",
-            "pathlib",
-            "server",
-            "request",
-            "response",
-        ]
+        # Simulate potential naming conflicts (variable names that might conflict)
+        # These are tested implicitly by the server operation below
 
         # Create a test that doesn't interfere with server internals
         test_file = Path(temp_dir) / "isolation_test.txt"
@@ -467,7 +458,7 @@ class TestDependencyErrorHandling:
     async def test_dependency_version_conflicts(self):
         """Test handling of potential dependency version conflicts."""
         # Get current package versions
-        packages = DependencyTester.get_installed_packages()
+        DependencyTester.get_installed_packages()
 
         server = MarkItDownMCPServer()
 

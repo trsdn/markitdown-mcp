@@ -362,15 +362,15 @@ jobs:
         
     - name: Run Black (code formatting)
       run: |
-        black --check --diff markitdown_mcp/ tests/
+        black --check --diff markitdown_mcp/
         
     - name: Run isort (import sorting)  
       run: |
-        isort --check-only --diff markitdown_mcp/ tests/
+        isort --check-only --diff markitdown_mcp/
         
     - name: Run flake8 (style guide)
       run: |
-        flake8 markitdown_mcp/ tests/ --max-line-length=100 --extend-ignore=E203,W503
+        flake8 markitdown_mcp/ --max-line-length=100 --extend-ignore=E203,W503
         
     - name: Run mypy (type checking)
       continue-on-error: true

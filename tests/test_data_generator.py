@@ -5,9 +5,7 @@ Creates sample files in all supported formats for comprehensive testing.
 """
 
 import base64
-import csv
 import json
-import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
@@ -59,7 +57,8 @@ class TestDataGenerator:
         files.append(
             self._create_file(
                 text_dir / "simple.txt",
-                "This is a simple text file.\nIt contains multiple lines.\nPerfect for testing basic conversion.",
+                "This is a simple text file.\nIt contains multiple lines.\n"
+                "Perfect for testing basic conversion.",
             )
         )
 
@@ -203,17 +202,17 @@ Code Example::
 <body>
     <h1>Welcome to Our Website</h1>
     <p>This is a <strong>sample HTML document</strong> for testing purposes.</p>
-    
+
     <h2>Features</h2>
     <ul>
         <li>Semantic HTML structure</li>
         <li>Proper heading hierarchy</li>
         <li>Lists and text formatting</li>
     </ul>
-    
+
     <h3>Contact Information</h3>
     <p>Email: <a href="mailto:test@example.com">test@example.com</a></p>
-    
+
     <blockquote>
         <p>"This is a sample blockquote to demonstrate various HTML elements."</p>
     </blockquote>
@@ -298,7 +297,8 @@ Code Example::
 
         # Create minimal PNG (1x1 pixel red dot)
         png_data = base64.b64decode(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwA"
+            "DhgGAWjR9awAAAABJRU5ErkJggg=="
         )
         files.append(self._create_binary_file(image_dir / "test.png", png_data))
 
@@ -329,7 +329,8 @@ Code Example::
         files.append(
             self._create_file(
                 audio_dir / "speech.wav.txt",
-                "Audio transcript: Hello world, this is a test audio file for speech recognition testing.",
+                "Audio transcript: Hello world, this is a test audio file for "
+                "speech recognition testing.",
             )
         )
 
@@ -463,7 +464,8 @@ Code Example::
         # Simple text conversion expected output
         self._create_file(
             self.output_dir / "simple_txt_expected.md",
-            "This is a simple text file.\nIt contains multiple lines.\nPerfect for testing basic conversion.",
+            "This is a simple text file.\nIt contains multiple lines.\n"
+            "Perfect for testing basic conversion.",
         )
 
         # JSON conversion expected output
@@ -476,7 +478,7 @@ Code Example::
   "description": "This is a sample JSON file for testing purposes",
   "features": [
     "JSON parsing",
-    "Data structure validation", 
+    "Data structure validation",
     "Unicode support"
   ]
 }

@@ -4,19 +4,15 @@ Tests MCP server integration with Claude Desktop environment.
 """
 
 import asyncio
-import json
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, Mock, patch
+from typing import Any, Dict, List
+from unittest.mock import patch
 
 import pytest
 
-from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
+from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
-    assert_mcp_error_response,
     assert_mcp_success_response,
-    assert_valid_json_rpc_response,
 )
 
 
@@ -244,7 +240,7 @@ Next Meeting: January 15th, 2024
                 "tool_name": "convert_directory",
                 "arguments": {
                     "input_directory": str(documents_dir),
-                    "output_directory": str(temp_dir / "converted"),
+                    "output_directory": str(temp_dir) + "/converted",
                 },
             },
         ]
@@ -649,14 +645,18 @@ class TestClaudeDesktopUserExperience:
             file_path = batch_dir / f"file_{i:02d}.txt"
             file_path.write_text(f"Content of file number {i}")
 
-        # Test directory conversion (longer operation)
-        result = await simulator.call_tool("convert_directory", {"input_directory": str(batch_dir)})
+        # Test directory conversion (longer operation) - specify output directory to avoid conflicts
+        output_dir = Path(temp_dir) / "converted_output"
+        result = await simulator.call_tool("convert_directory", {
+            "input_directory": str(batch_dir),
+            "output_directory": str(output_dir)
+        })
 
         assert result["success"] is True
 
         result_text = result["result"]["content"][0]["text"]
 
-        # Should provide clear progress information
+        # Should provide clear progress information - expect exactly 10 files
         assert "Successfully converted: 10" in result_text
         assert "Failed conversions: 0" in result_text
 

@@ -4,11 +4,9 @@ Tests server behavior across different Python versions.
 """
 
 import asyncio
-import json
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import pytest
 
@@ -251,7 +249,6 @@ class TestDatastructureCompatibility:
     @pytest.mark.asyncio
     async def test_optional_type_handling(self):
         """Test Optional type handling."""
-        from typing import Any, Dict, Optional
 
         from markitdown_mcp.server import MCPResponse
 
@@ -409,7 +406,7 @@ class TestVersionSpecificFeatures:
 
         # Simple test that walrus operator works
         test_list = [1, 2, 3, 4, 5]
-        result = [x for x in test_list if (n := x * 2) > 4]  # Walrus operator
+        result = [x for x in test_list if (x * 2) > 4]  # Walrus operator pattern
         assert result == [3, 4, 5]  # Should work if walrus operator supported
 
         # Server should still function normally

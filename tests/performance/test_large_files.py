@@ -4,11 +4,9 @@ Tests server performance with large files and memory efficiency.
 """
 
 import json
-import os
-import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import psutil
 import pytest
@@ -351,7 +349,7 @@ class TestMemoryEfficiency:
             measurement = monitor.record_measurement(f"after_file_{i}")
             peak_memories.append(measurement["memory_mb"])
 
-        summary = monitor.get_summary()
+        monitor.get_summary()
 
         # Memory should not continuously grow
         max_memory_growth = max(peak_memories) - base_memory

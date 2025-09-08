@@ -6,12 +6,10 @@ Tests server memory management, leak detection, and efficiency.
 import base64
 import gc
 import json
-import os
-import tempfile
 import time
 import tracemalloc
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import psutil
 import pytest
@@ -536,7 +534,7 @@ class TestMemoryLeakDetection:
                     },
                 )
 
-            response = await server.handle_request(request)
+            await server.handle_request(request)
             # Don't assert success - errors are expected
 
             if i % 5 == 4:
@@ -593,7 +591,7 @@ class TestMemoryStressScenarios:
                     params={"name": "convert_file", "arguments": {"file_path": file_path}},
                 )
 
-                response = await server.handle_request(request)
+                await server.handle_request(request)
                 # Accept some failures under stress
 
             profiler.record_measurement(f"iteration_{iteration}")
@@ -661,7 +659,7 @@ class TestMemoryStressScenarios:
                 params={"name": "convert_file", "arguments": {"file_path": str(large_file)}},
             )
 
-            response = await server.handle_request(request)
+            await server.handle_request(request)
 
             profiler.record_measurement(f"after_{filename}")
 

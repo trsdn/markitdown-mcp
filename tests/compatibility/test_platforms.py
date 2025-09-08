@@ -5,16 +5,14 @@ Tests server behavior across different operating systems and environments.
 
 import os
 import platform
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
+from tests.helpers.assertions import assert_mcp_success_response
 
 
 class PlatformDetector:
@@ -85,7 +83,8 @@ class TestPlatformBasics:
         assert response.result["protocolVersion"] == "2024-11-05"
 
         print(
-            f"✓ Server initialization successful on {platform_info['system']} {platform_info['machine']}"
+            f"✓ Server initialization successful on {platform_info['system']} "
+            f"{platform_info['machine']}"
         )
 
     @pytest.mark.compatibility
@@ -156,7 +155,10 @@ class TestFileSystemCompatibility:
 
         # Create test file with platform-appropriate path
         test_file = Path(temp_dir) / "cross_platform_test.txt"
-        test_content = f"Cross-platform test on {platform_info['system']}\nPath separator: {platform_info['path_separator']}\n"
+        test_content = (
+            f"Cross-platform test on {platform_info['system']}\n"
+            f"Path separator: {platform_info['path_separator']}\n"
+        )
         test_file.write_text(test_content, encoding="utf-8")
 
         # Test with both forward slashes and platform-native paths
@@ -306,7 +308,8 @@ class TestEnvironmentCompatibility:
         assert_mcp_success_response(response, "python-compat")
 
         print(
-            f"✓ Compatible with Python {platform_info['python_version']} ({platform_info['python_implementation']})"
+            f"✓ Compatible with Python {platform_info['python_version']} "
+            f"({platform_info['python_implementation']})"
         )
 
     @pytest.mark.compatibility
@@ -360,7 +363,7 @@ class TestEnvironmentCompatibility:
     async def test_line_ending_compatibility(self, temp_dir):
         """Test line ending handling across platforms."""
         server = MarkItDownMCPServer()
-        platform_info = PlatformDetector.get_platform_info()
+        PlatformDetector.get_platform_info()
 
         # Test different line endings
         line_ending_tests = [

@@ -9,7 +9,7 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import Any, Dict
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 
 import pytest
 import pytest_asyncio

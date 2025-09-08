@@ -6,15 +6,13 @@ Tests server performance under concurrent load and resource contention.
 import asyncio
 import json
 import random
-import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class ConcurrencyTestHarness:
@@ -524,7 +522,7 @@ class TestStressAndLoad:
         # Shuffle requests for realistic mixed load
         random.shuffle(requests)
 
-        results = await harness.run_concurrent_requests(requests)
+        await harness.run_concurrent_requests(requests)
         summary = harness.get_performance_summary()
 
         # Should handle mixed load reasonably well
@@ -705,7 +703,7 @@ class TestErrorHandlingUnderConcurrency:
             )
 
         results = await harness.run_concurrent_requests(requests)
-        summary = harness.get_performance_summary()
+        harness.get_performance_summary()
 
         # Check that valid requests succeeded and errors failed appropriately
         pre_error_results = [r for r in results if r["request_id"].startswith("pre-error")]

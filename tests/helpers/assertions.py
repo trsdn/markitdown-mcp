@@ -5,7 +5,7 @@ Custom assertions and validation helpers for MarkItDown MCP Server tests
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 from markitdown_mcp.server import MCPRequest, MCPResponse
 

@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
+from tests.helpers.assertions import assert_mcp_success_response
 
 
 class DoSAttackSimulator:
@@ -101,7 +101,7 @@ class DoSAttackSimulator:
         self, attack_type: str, **kwargs
     ) -> Dict[str, Any]:
         """Simulate resource exhaustion attacks."""
-        start_time = time.time()
+        time.time()
 
         if attack_type == "large_files":
             return await self._large_file_attack(**kwargs)
@@ -340,7 +340,7 @@ class TestRequestFloodProtection:
         simulator = DoSAttackSimulator()
 
         # Simulate moderate flood (50 requests)
-        results = await simulator.simulate_request_flood(50)
+        await simulator.simulate_request_flood(50)
 
         # Server should handle moderate load
         summary = simulator.attack_results[0]
@@ -365,7 +365,7 @@ class TestRequestFloodProtection:
         simulator = DoSAttackSimulator()
 
         # Simulate heavy flood (200 requests)
-        results = await simulator.simulate_request_flood(200)
+        await simulator.simulate_request_flood(200)
 
         summary = simulator.attack_results[0]
 

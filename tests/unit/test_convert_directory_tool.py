@@ -5,14 +5,13 @@ Unit tests for the convert_directory MCP tool
 import shutil
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
     assert_convert_directory_response,
-    assert_file_converted_to_markdown,
     assert_mcp_error_response,
     assert_mcp_success_response,
 )
