@@ -243,7 +243,9 @@ class MarkItDownMCPServer:
                                         },
                                         "file_content": {
                                             "type": "string",
-                                            "description": "Base64 encoded file content (alternative to file_path)",
+                                            "description": (
+                                                "Base64 encoded file content (alternative to file_path)"
+                                            ),
                                         },
                                         "filename": {
                                             "type": "string",
@@ -560,13 +562,13 @@ class MarkItDownMCPServer:
                             error_msg = error_msg[:100] + "..."
                         failed_files.append(f"{file_path.name}: {error_msg}")
 
-            result_text = f"Directory conversion completed:\n"
+            result_text = "Directory conversion completed:\n"
             result_text += f"- Successfully converted: {success_count} files\n"
             result_text += f"- Failed conversions: {failed_count} files\n"
             result_text += f"- Output directory: {validated_output_dir}\n"
 
             if failed_files:
-                result_text += f"\nFailed files:\n"
+                result_text += "\nFailed files:\n"
                 for failed in failed_files[:10]:  # Limit to first 10 failures
                     result_text += f"  - {failed}\n"
                 if len(failed_files) > 10:
