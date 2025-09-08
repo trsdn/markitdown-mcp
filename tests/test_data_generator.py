@@ -4,14 +4,14 @@ Test data generator for MarkItDown MCP Server tests.
 Creates sample files in all supported formats for comprehensive testing.
 """
 
-import json
+import base64
 import csv
+import json
 import tempfile
+import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
 from typing import Dict, List
-import base64
-import xml.etree.ElementTree as ET
 
 
 class TestDataGenerator:

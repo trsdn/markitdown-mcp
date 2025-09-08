@@ -3,17 +3,18 @@ Cross-platform compatibility tests.
 Tests server behavior across different operating systems and environments.
 """
 
-import pytest
 import os
-import sys
 import platform
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any, List
-import subprocess
+from typing import Any, Dict, List
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_success_response, assert_mcp_error_response
+from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class PlatformDetector:

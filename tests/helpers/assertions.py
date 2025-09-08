@@ -3,11 +3,11 @@ Custom assertions and validation helpers for MarkItDown MCP Server tests
 """
 
 import json
-from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
-from markitdown_mcp.server import MCPResponse, MCPRequest
+from markitdown_mcp.server import MCPRequest, MCPResponse
 
 
 def assert_valid_mcp_response(response: MCPResponse, expected_id: str = None) -> None:

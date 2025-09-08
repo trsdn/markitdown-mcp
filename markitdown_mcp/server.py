@@ -5,16 +5,17 @@ Converts various file formats to Markdown using Microsoft's MarkItDown library.
 """
 
 import asyncio
+import base64
 import json
-import sys
+import logging
 import os
+import sys
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import logging
+
 from markitdown import MarkItDown
-from dataclasses import dataclass
-import base64
-import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

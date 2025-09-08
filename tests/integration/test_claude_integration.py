@@ -3,18 +3,19 @@ Claude Desktop integration tests.
 Tests MCP server integration with Claude Desktop environment.
 """
 
-import pytest
-import json
 import asyncio
+import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
 from tests.helpers.assertions import (
-    assert_mcp_success_response,
     assert_mcp_error_response,
+    assert_mcp_success_response,
     assert_valid_json_rpc_response,
 )
 

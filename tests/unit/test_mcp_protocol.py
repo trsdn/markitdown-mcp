@@ -2,17 +2,18 @@
 Unit tests for MCP protocol handling in MarkItDown MCP Server
 """
 
-import pytest
 import json
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
+from typing import Any, Dict
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
 from tests.helpers.assertions import (
-    assert_valid_mcp_response,
-    assert_mcp_success_response,
     assert_mcp_error_response,
+    assert_mcp_success_response,
     assert_valid_json_rpc_response,
+    assert_valid_mcp_response,
 )
 
 

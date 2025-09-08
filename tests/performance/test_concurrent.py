@@ -3,17 +3,18 @@ Concurrent request handling performance tests.
 Tests server performance under concurrent load and resource contention.
 """
 
-import pytest
 import asyncio
-import time
-import tempfile
-from pathlib import Path
-from typing import Dict, Any, List, Tuple
-import random
 import json
+import random
+import tempfile
+import time
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_success_response, assert_mcp_error_response
+from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class ConcurrencyTestHarness:

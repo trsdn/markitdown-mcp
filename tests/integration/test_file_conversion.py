@@ -3,17 +3,18 @@ End-to-end file conversion integration tests.
 Tests actual file conversion with real MarkItDown library.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+from unittest.mock import Mock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
-    assert_mcp_success_response,
-    assert_mcp_error_response,
     assert_convert_file_response,
+    assert_mcp_error_response,
+    assert_mcp_success_response,
 )
 
 

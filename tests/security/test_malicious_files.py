@@ -3,14 +3,15 @@ Malicious file handling security tests.
 Tests server behavior with malicious file content and formats.
 """
 
-import pytest
-import tempfile
-import zipfile
-import json
-from pathlib import Path
-from typing import Dict, Any, List
 import base64
+import json
+import tempfile
 import xml.etree.ElementTree as ET
+import zipfile
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response

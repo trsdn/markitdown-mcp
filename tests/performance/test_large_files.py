@@ -3,14 +3,15 @@ Performance tests for large file processing.
 Tests server performance with large files and memory efficiency.
 """
 
-import pytest
-import time
-import tempfile
-import psutil
-import os
-from pathlib import Path
-from typing import Dict, Any, List
 import json
+import os
+import tempfile
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+
+import psutil
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_success_response

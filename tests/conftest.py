@@ -2,16 +2,17 @@
 pytest configuration and shared fixtures for MarkItDown MCP Server tests
 """
 
+import asyncio
+import base64
+import json
+import shutil
+import tempfile
+from pathlib import Path
+from typing import Any, Dict
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 import pytest_asyncio
-import tempfile
-import shutil
-import json
-import base64
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock
-from typing import Dict, Any
-import asyncio
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
 

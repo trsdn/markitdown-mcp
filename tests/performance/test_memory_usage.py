@@ -3,17 +3,18 @@ Memory usage and efficiency performance tests.
 Tests server memory management, leak detection, and efficiency.
 """
 
-import pytest
+import base64
 import gc
-import time
-import psutil
+import json
 import os
 import tempfile
-from pathlib import Path
-from typing import Dict, Any, List, Optional
+import time
 import tracemalloc
-import json
-import base64
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import psutil
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_success_response

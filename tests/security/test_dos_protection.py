@@ -3,18 +3,19 @@ Denial of Service (DoS) protection tests.
 Tests server resilience against various DoS attack vectors.
 """
 
-import pytest
 import asyncio
-import time
-import tempfile
-from pathlib import Path
-from typing import List, Dict, Any
-import random
-import json
 import base64
+import json
+import random
+import tempfile
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_success_response, assert_mcp_error_response
+from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class DoSAttackSimulator:

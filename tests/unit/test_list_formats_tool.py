@@ -2,14 +2,15 @@
 Unit tests for the list_supported_formats MCP tool
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
-    assert_mcp_success_response,
-    assert_mcp_error_response,
     assert_list_formats_response,
+    assert_mcp_error_response,
+    assert_mcp_success_response,
 )
 
 

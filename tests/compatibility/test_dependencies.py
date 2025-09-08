@@ -3,17 +3,18 @@ Dependency compatibility tests.
 Tests server behavior with different dependency configurations and versions.
 """
 
-import pytest
-import sys
 import importlib
 import subprocess
-from pathlib import Path
-from typing import Dict, Any, List, Optional
-from unittest.mock import patch, MagicMock
+import sys
 import tempfile
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_success_response, assert_mcp_error_response
+from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class DependencyTester:
@@ -361,12 +362,13 @@ class TestDependencyIsolation:
     async def test_module_import_safety(self):
         """Test that module imports are safe and don't affect global state."""
         # Import server module
-        from markitdown_mcp.server import MarkItDownMCPServer
+        import json
+        import pathlib
 
         # Should not affect global imports
         import sys
-        import json
-        import pathlib
+
+        from markitdown_mcp.server import MarkItDownMCPServer
 
         # These should still work normally
         assert hasattr(json, "dumps")

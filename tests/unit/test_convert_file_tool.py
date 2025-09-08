@@ -2,25 +2,26 @@
 Unit tests for the convert_file MCP tool
 """
 
-import pytest
-import tempfile
 import base64
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 import json
+import tempfile
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import (
-    assert_mcp_success_response,
-    assert_mcp_error_response,
     assert_convert_file_response,
     assert_file_path_safe,
+    assert_mcp_error_response,
+    assert_mcp_success_response,
 )
 from tests.helpers.file_utils import (
-    create_test_file,
-    create_minimal_pdf,
     create_corrupted_file,
     create_large_file,
+    create_minimal_pdf,
+    create_test_file,
 )
 
 

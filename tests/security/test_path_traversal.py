@@ -3,12 +3,13 @@ Path traversal security tests.
 Tests protection against path traversal attacks and unsafe file access.
 """
 
-import pytest
-import tempfile
 import os
-from pathlib import Path
-from typing import List, Dict, Any
 import stat
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response

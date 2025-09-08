@@ -2,15 +2,15 @@
 File utilities for testing MarkItDown MCP Server
 """
 
-import tempfile
-import shutil
-from pathlib import Path
-from typing import Dict, List, Union, Optional
-import json
 import csv
 import io
+import json
 import random
+import shutil
 import string
+import tempfile
+from pathlib import Path
+from typing import Dict, List, Optional, Union
 
 
 def create_test_file(content: str, filename: str, temp_dir: Optional[str] = None) -> str:

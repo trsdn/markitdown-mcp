@@ -3,18 +3,19 @@ Full MCP server integration tests.
 Tests the complete MCP protocol flow and server lifecycle.
 """
 
-import pytest
-import json
 import asyncio
+import json
 import tempfile
 from pathlib import Path
+from typing import Any, Dict, List
 from unittest.mock import AsyncMock, patch
-from typing import Dict, Any, List
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest, MCPResponse
 from tests.helpers.assertions import (
-    assert_mcp_success_response,
     assert_mcp_error_response,
+    assert_mcp_success_response,
     assert_valid_json_rpc_response,
 )
 

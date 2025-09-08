@@ -3,16 +3,17 @@ Python version compatibility tests.
 Tests server behavior across different Python versions.
 """
 
-import pytest
-import sys
 import asyncio
+import json
+import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
-import json
+from typing import Any, Dict, List, Tuple
+
+import pytest
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
-from tests.helpers.assertions import assert_mcp_success_response, assert_mcp_error_response
+from tests.helpers.assertions import assert_mcp_error_response, assert_mcp_success_response
 
 
 class PythonVersionTester:
@@ -250,8 +251,9 @@ class TestDatastructureCompatibility:
     @pytest.mark.asyncio
     async def test_optional_type_handling(self):
         """Test Optional type handling."""
+        from typing import Any, Dict, Optional
+
         from markitdown_mcp.server import MCPResponse
-        from typing import Optional, Dict, Any
 
         # Test with None values (Optional types)
         response = MCPResponse(id="optional-test", result=None, error=None)
