@@ -515,7 +515,7 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
             result.text_content = sanitize_unicode_text(result.text_content)
 
             # Limit output size to prevent resource exhaustion
-            max_output_size = 1 * 1024 * 1024  # 1MB (reduced from 5MB)
+            max_output_size = 5 * 1024 * 1024  # 5MB
             if len(result.text_content) > max_output_size:
                 result.text_content = (
                     result.text_content[:max_output_size]
