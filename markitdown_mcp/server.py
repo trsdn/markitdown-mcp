@@ -961,14 +961,15 @@ class MarkItDownMCPServer:
                 safe_message = "File not found"
             elif "file name too long" in error_str:
                 safe_message = "Invalid file path"
-            elif any(word in error_str for word in ["security violation", "invalid path", "path traversal"]):
+            elif any(
+                word in error_str
+                for word in ["security violation", "invalid path", "path traversal"]
+            ):
                 safe_message = "Invalid file path"
             else:
                 safe_message = "Conversion failed"
-            
-            return MCPResponse(
-                id=request_id, error={"code": -32603, "message": safe_message}
-            )
+
+            return MCPResponse(id=request_id, error={"code": -32603, "message": safe_message})
 
     async def list_supported_formats_tool(self, request_id: str) -> MCPResponse:
         """List all supported file formats"""
@@ -1148,11 +1149,14 @@ class MarkItDownMCPServer:
                 safe_message = "Directory not found"
             elif "not a directory" in error_str:
                 safe_message = "Invalid directory path"
-            elif any(word in error_str for word in ["security violation", "invalid path", "path traversal"]):
+            elif any(
+                word in error_str
+                for word in ["security violation", "invalid path", "path traversal"]
+            ):
                 safe_message = "Invalid directory path"
             else:
                 safe_message = "Directory conversion failed"
-            
+
             return MCPResponse(
                 id=request_id,
                 error={"code": -32603, "message": safe_message},
