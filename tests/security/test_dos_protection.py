@@ -309,16 +309,18 @@ class DoSAttackSimulator:
             temp_dir = tempfile.mkdtemp()
 
         # Create deeply nested JSON that's expensive to parse
+        # Reduced complexity to prevent exponential memory growth
         complex_data = {"level": 0, "data": "root"}
-        for i in range(100):  # 100 levels deep
+        max_depth = 20 if os.environ.get('CI') else 50  # Less depth in CI
+        for i in range(max_depth):
             complex_data = {
                 "level": i + 1,
                 "nested": complex_data,
-                "array": [complex_data.copy() for _ in range(10)],  # Exponential growth
+                "array": [{"item": j} for j in range(5)],  # Fixed size, no exponential growth
                 "metadata": {
                     "index": i,
                     "description": f"Level {i} with complex nesting",
-                    "references": list(range(100)),
+                    "references": list(range(10)),  # Smaller reference list
                 },
             }
 
