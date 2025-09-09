@@ -63,6 +63,7 @@ dev = [
 test = [
     "psutil>=5.9",
     "memory_profiler>=0.60",
+    "pytest-timeout>=2.1.0",
 ]
 
 [project.urls]

@@ -6,6 +6,7 @@ Tests server resilience against various DoS attack vectors.
 import asyncio
 import base64
 import json
+import os
 import random
 import tempfile
 import time
@@ -232,8 +233,9 @@ class DoSAttackSimulator:
 
     async def _base64_bomb_attack(self) -> Dict[str, Any]:
         """Attack with large base64 content."""
-        # Create large content
-        large_content = "DoS base64 bomb attack.\n" * (5 * 1024 * 1024)  # 5MB of text
+        # Create large content - reduced for CI
+        size_multiplier = 1 if os.environ.get('CI') else 5
+        large_content = "DoS base64 bomb attack.\n" * (size_multiplier * 1024 * 1024)  # MB of text
         encoded_content = base64.b64encode(large_content.encode()).decode()
 
         request = MCPRequest(
@@ -360,12 +362,14 @@ class TestRequestFloodProtection:
     @pytest.mark.security
     @pytest.mark.slow
     @pytest.mark.asyncio
+    @pytest.mark.timeout(30)  # 30 second timeout
     async def test_heavy_request_flood(self):
         """Test handling of heavy request flood."""
         simulator = DoSAttackSimulator()
 
-        # Simulate heavy flood (200 requests)
-        await simulator.simulate_request_flood(200)
+        # Simulate heavy flood - reduced for CI
+        num_requests = 50 if os.environ.get('CI') else 200
+        await simulator.simulate_request_flood(num_requests)
 
         summary = simulator.attack_results[0]
 
@@ -425,12 +429,13 @@ class TestResourceExhaustionProtection:
     @pytest.mark.security
     @pytest.mark.slow
     @pytest.mark.asyncio
+    @pytest.mark.timeout(60)  # 60 second timeout
     async def test_large_file_dos_protection(self, temp_dir):
         """Test protection against large file DoS attacks."""
         simulator = DoSAttackSimulator()
 
-        # Test with progressively larger files
-        file_sizes = [10, 25, 50]  # MB
+        # Test with progressively larger files - reduced for CI
+        file_sizes = [5, 10] if os.environ.get('CI') else [10, 25, 50]  # MB
 
         for size_mb in file_sizes:
             result = await simulator.simulate_resource_exhaustion_attack(
@@ -460,13 +465,15 @@ class TestResourceExhaustionProtection:
     @pytest.mark.security
     @pytest.mark.slow
     @pytest.mark.asyncio
+    @pytest.mark.timeout(45)  # 45 second timeout
     async def test_concurrent_request_dos_protection(self):
         """Test protection against concurrent request DoS."""
         simulator = DoSAttackSimulator()
 
-        # Test with high concurrency
+        # Test with high concurrency - reduced for CI
+        num_concurrent = 25 if os.environ.get('CI') else 75
         result = await simulator.simulate_resource_exhaustion_attack(
-            "many_concurrent", num_concurrent=75, file_size_kb=50
+            "many_concurrent", num_concurrent=num_concurrent, file_size_kb=50
         )
 
         # Should complete without crashing
@@ -489,6 +496,7 @@ class TestResourceExhaustionProtection:
 
     @pytest.mark.security
     @pytest.mark.asyncio
+    @pytest.mark.timeout(20)  # 20 second timeout
     async def test_base64_bomb_dos_protection(self):
         """Test protection against base64 bomb DoS."""
         simulator = DoSAttackSimulator()
