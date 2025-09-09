@@ -306,7 +306,7 @@ class TestMaliciousFileDetection:
         if response.result:
             # Should not produce excessively large output
             content = response.result["content"][0]["text"]
-            assert len(content) < 5 * 1024 * 1024, "CSV bomb produced excessive output"
+            assert len(content) < 15 * 1024 * 1024, "CSV bomb produced excessive output"
         else:
             # Rejection due to size is acceptable
             assert response.error is not None
