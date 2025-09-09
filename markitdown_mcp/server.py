@@ -11,7 +11,6 @@ import hmac
 import json
 import logging
 import os
-import signal
 import sys
 import tempfile
 import threading
@@ -36,70 +35,82 @@ class TimeoutError(Exception):
     """Raised when an operation times out."""
 
 
-def timeout_handler(signum, frame):
-    """Handler for timeout signal."""
-    raise TimeoutError("Operation timed out")
-
-
 def with_timeout(timeout_seconds=30):
-    """Decorator to add timeout protection to functions."""
+    """Decorator to add timeout protection to functions using threading."""
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            # Set up timeout handler
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout_seconds)
-            try:
-                result = func(*args, **kwargs)
-                return result
-            finally:
-                # Reset alarm and handler
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+            import threading
+
+            result = [None]
+            exception = [None]
+
+            def target():
+                try:
+                    result[0] = func(*args, **kwargs)
+                except Exception as e:
+                    exception[0] = e
+
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout_seconds)
+
+            if thread.is_alive():
+                # Thread is still running, timeout occurred
+                raise TimeoutError("Operation timed out")
+
+            if exception[0]:
+                raise exception[0]
+
+            return result[0]
+
         return wrapper
+
     return decorator
 
 
 def sanitize_unicode_text(text: str) -> str:
     """
     Sanitize Unicode text by normalizing and removing dangerous characters.
-    
+
     Args:
         text: Input text to sanitize
-        
+
     Returns:
         Sanitized text
     """
     if not isinstance(text, str):
         return str(text)
-    
+
     # Unicode normalization
-    text = unicodedata.normalize('NFKC', text)
-    
+    text = unicodedata.normalize("NFKC", text)
+
     # Remove Bidi override characters and other potentially dangerous Unicode
     dangerous_chars = [
-        '\u202E',  # RIGHT-TO-LEFT OVERRIDE
-        '\u202D',  # LEFT-TO-RIGHT OVERRIDE
-        '\u2066',  # LEFT-TO-RIGHT ISOLATE
-        '\u2067',  # RIGHT-TO-LEFT ISOLATE
-        '\u2068',  # FIRST STRONG ISOLATE
-        '\u2069',  # POP DIRECTIONAL ISOLATE
+        "\u202e",  # RIGHT-TO-LEFT OVERRIDE
+        "\u202d",  # LEFT-TO-RIGHT OVERRIDE
+        "\u2066",  # LEFT-TO-RIGHT ISOLATE
+        "\u2067",  # RIGHT-TO-LEFT ISOLATE
+        "\u2068",  # FIRST STRONG ISOLATE
+        "\u2069",  # POP DIRECTIONAL ISOLATE
     ]
-    
+
     for char in dangerous_chars:
-        text = text.replace(char, '')
-    
+        text = text.replace(char, "")
+
     return text
 
 
 def secure_compare(a: str, b: str) -> bool:
     """
     Perform constant-time string comparison to prevent timing attacks.
-    
+
     Args:
         a: First string
         b: Second string
-        
+
     Returns:
         True if strings are equal
     """
@@ -109,13 +120,14 @@ def secure_compare(a: str, b: str) -> bool:
 def normalize_timing(func):
     """
     Decorator to normalize execution time and prevent timing attacks.
-    
+
     Args:
         func: Function to wrap
-        
+
     Returns:
         Wrapped function with normalized timing
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -125,32 +137,32 @@ def normalize_timing(func):
         except Exception as e:
             result = e
             success = False
-        
+
         # Ensure minimum execution time to prevent timing differences
         min_time = 0.1  # 100ms minimum
         elapsed = time.time() - start_time
         if elapsed < min_time:
             time.sleep(min_time - elapsed)
-        
+
         if success:
             return result
         else:
             raise result
-    
+
     return wrapper
 
 
 def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
     """
     Validate and decode base64 data with size limits.
-    
+
     Args:
         data: Base64 encoded string
         max_size: Maximum allowed decoded size in bytes
-        
+
     Returns:
         Decoded bytes
-        
+
     Raises:
         SecurityError: If validation fails
     """
@@ -158,16 +170,16 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
         # Basic format check
         if not isinstance(data, str):
             raise SecurityError("Security violation: invalid base64 format")
-        
+
         # Decode with validation
         decoded = base64.b64decode(data, validate=True)
-        
+
         # Check size limit
         if len(decoded) > max_size:
             raise SecurityError("Security violation: file too large")
-        
+
         return decoded
-        
+
     except Exception as e:
         raise SecurityError("Security violation: invalid base64 data")
 
@@ -175,43 +187,43 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
 def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
     """
     Extract readable text from potentially binary data.
-    
+
     Args:
         data: Binary data
         filename: Optional filename for context
-        
+
     Returns:
         Extracted text or None if no readable content found
     """
     try:
         # Try UTF-8 first
         try:
-            text = data.decode('utf-8')
+            text = data.decode("utf-8")
             # Check if it contains reasonable amount of printable characters
             printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
             if printable_ratio > 0.7:  # At least 70% printable
                 return text
         except UnicodeDecodeError:
             pass
-        
+
         # Try other common encodings
-        encodings = ['latin1', 'cp1252', 'iso-8859-1']
+        encodings = ["latin1", "cp1252", "iso-8859-1"]
         for encoding in encodings:
             try:
-                text = data.decode(encoding, errors='ignore')
+                text = data.decode(encoding, errors="ignore")
                 printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
                 if printable_ratio > 0.7:
                     return text
             except:
                 continue
-        
+
         # Extract printable ASCII characters as fallback
-        printable_chars = ''.join(chr(b) for b in data if 32 <= b <= 126 or b in [9, 10, 13])
+        printable_chars = "".join(chr(b) for b in data if 32 <= b <= 126 or b in [9, 10, 13])
         if len(printable_chars) > 20:  # At least some readable content
             return printable_chars
-        
+
         return None
-        
+
     except Exception:
         return None
 
@@ -220,14 +232,14 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
 def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
     """
     Safely convert a file with timeout and recursion protection.
-    
+
     Args:
         markitdown_instance: MarkItDown instance
         file_path: Path to file to convert
-        
+
     Returns:
         Conversion result
-        
+
     Raises:
         TimeoutError: If conversion times out
         RecursionError: If recursion limit is exceeded
@@ -236,52 +248,55 @@ def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
     # Set recursion limit
     original_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(100)  # Conservative limit
-    
+
     try:
         # Check if file might contain binary data in text format
         file_path_obj = Path(file_path)
         if file_path_obj.exists():
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 data = f.read(1024)  # Read first 1KB to check
-                
+
             # If it's a text file but contains significant binary content
             mime_type = None
             try:
                 import mimetypes
+
                 mime_type = mimetypes.guess_type(file_path)[0]
             except:
                 pass
-                
-            if mime_type and mime_type.startswith('text/'):
+
+            if mime_type and mime_type.startswith("text/"):
                 # For text files, extract readable content if binary data present
                 try:
                     # Test if it's valid text
-                    data.decode('utf-8')
+                    data.decode("utf-8")
                 except UnicodeDecodeError:
                     # Contains binary data, extract text portions
                     extracted_text = extract_text_from_binary(data, str(file_path_obj))
                     if extracted_text:
                         # Create temporary file with extracted text
-                        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+                        with tempfile.NamedTemporaryFile(
+                            mode="w", suffix=".txt", delete=False
+                        ) as tmp:
                             tmp.write(extracted_text)
                             temp_path = tmp.name
                         try:
                             result = markitdown_instance.convert(temp_path)
-                            if hasattr(result, 'text_content') and result.text_content:
+                            if hasattr(result, "text_content") and result.text_content:
                                 result.text_content = sanitize_unicode_text(result.text_content)
                             return result
                         finally:
                             Path(temp_path).unlink(missing_ok=True)
-        
+
         # Normal conversion
         result = markitdown_instance.convert(file_path)
-        
+
         # Sanitize the result text
-        if hasattr(result, 'text_content') and result.text_content:
+        if hasattr(result, "text_content") and result.text_content:
             result.text_content = sanitize_unicode_text(result.text_content)
-        
+
         return result
-        
+
     except RecursionError:
         raise SecurityError("Security violation: processing limit exceeded")
     except Exception as e:
@@ -610,7 +625,7 @@ class MarkItDownMCPServer:
                     logger.warning(f"Security violation blocked: {e}")
                     return MCPResponse(
                         id=request_id,
-                        error={"code": -32602, "message": f"Security violation: {str(e)}"},
+                        error={"code": -32602, "message": str(e)},
                     )
 
                 if not validated_path.exists():
@@ -631,7 +646,7 @@ class MarkItDownMCPServer:
                 except (TimeoutError, SecurityError) as e:
                     return MCPResponse(
                         id=request_id,
-                        error={"code": -32602, "message": f"Security violation: {str(e)}"},
+                        error={"code": -32602, "message": str(e)},
                     )
                 markdown_content = result.text_content
 
@@ -781,7 +796,7 @@ class MarkItDownMCPServer:
                         id=request_id,
                         error={
                             "code": -32602,
-                            "message": f"Security violation in output directory: {str(e)}",
+                            "message": f"Output directory error: {str(e)}",
                         },
                     )
             else:
