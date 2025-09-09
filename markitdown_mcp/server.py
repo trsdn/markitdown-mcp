@@ -953,8 +953,21 @@ class MarkItDownMCPServer:
 
         except Exception as e:
             logger.error(f"Error in convert_file_tool: {e}")
+            # Sanitize error message to prevent information disclosure
+            error_str = str(e).lower()
+            if "permission denied" in error_str or "access denied" in error_str:
+                safe_message = "File not found"
+            elif "no such file or directory" in error_str:
+                safe_message = "File not found"
+            elif "file name too long" in error_str:
+                safe_message = "Invalid file path"
+            elif any(word in error_str for word in ["security violation", "invalid path", "path traversal"]):
+                safe_message = "Invalid file path"
+            else:
+                safe_message = "Conversion failed"
+            
             return MCPResponse(
-                id=request_id, error={"code": -32603, "message": f"Conversion failed: {str(e)}"}
+                id=request_id, error={"code": -32603, "message": safe_message}
             )
 
     async def list_supported_formats_tool(self, request_id: str) -> MCPResponse:
@@ -1127,9 +1140,22 @@ class MarkItDownMCPServer:
 
         except Exception as e:
             logger.error(f"Error in convert_directory_tool: {e}")
+            # Sanitize error message to prevent information disclosure
+            error_str = str(e).lower()
+            if "permission denied" in error_str or "access denied" in error_str:
+                safe_message = "Directory not found"
+            elif "no such file or directory" in error_str:
+                safe_message = "Directory not found"
+            elif "not a directory" in error_str:
+                safe_message = "Invalid directory path"
+            elif any(word in error_str for word in ["security violation", "invalid path", "path traversal"]):
+                safe_message = "Invalid directory path"
+            else:
+                safe_message = "Directory conversion failed"
+            
             return MCPResponse(
                 id=request_id,
-                error={"code": -32603, "message": f"Directory conversion failed: {str(e)}"},
+                error={"code": -32603, "message": safe_message},
             )
 
     async def run(self) -> None:
