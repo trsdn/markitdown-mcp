@@ -67,8 +67,8 @@ class MaliciousFileGenerator:
         # Create deeply nested JSON structure
         json_data = "test"
 
-        # Nest it deeply
-        for i in range(1000):
+        # Nest it deeply (reduced from 1000 to 100 to avoid Python serialization issues)
+        for i in range(100):
             json_data = {"nested": json_data, "level": i}
 
         with open(file_path, "w") as f:

@@ -6,15 +6,19 @@ Converts various file formats to Markdown using Microsoft's MarkItDown library.
 
 import asyncio
 import base64
+import csv
 import functools
 import hmac
 import json
 import logging
+import mimetypes
 import os
+import re
 import sys
 import tempfile
 import time
 import unicodedata
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -94,12 +98,214 @@ def sanitize_unicode_text(text: str) -> str:
         "\u2067",  # RIGHT-TO-LEFT ISOLATE
         "\u2068",  # FIRST STRONG ISOLATE
         "\u2069",  # POP DIRECTIONAL ISOLATE
+        "\u0000",  # NULL byte
+        "\ufeff",  # BYTE ORDER MARK
+        "\u200b",  # ZERO WIDTH SPACE
+        "\u200c",  # ZERO WIDTH NON-JOINER
+        "\u200d",  # ZERO WIDTH JOINER
+        "\ufffd",  # REPLACEMENT CHARACTER
     ]
 
     for char in dangerous_chars:
         text = text.replace(char, "")
 
     return text
+
+
+def validate_xml_security(file_path: str) -> str:
+    """
+    Validate and sanitize XML files to prevent entity expansion attacks.
+    
+    Args:
+        file_path: Path to XML file
+        
+    Returns:
+        Path to sanitized temporary file
+        
+    Raises:
+        SecurityError: If XML contains dangerous constructs
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        # Check for dangerous XML patterns
+        dangerous_patterns = [
+            r'<!ENTITY\s+\w+\s+"[^"]*&[^"]*"[^>]*>',  # Entity references within entities
+            r'<!ENTITY[^>]*&[^>]*>',  # Entities with references
+            r'SYSTEM\s+["\']',  # External entity references
+            r'PUBLIC\s+["\']',  # Public entity references
+        ]
+        
+        for pattern in dangerous_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                raise SecurityError("Security violation: dangerous XML entities detected")
+        
+        # Count entity definitions (limit to prevent expansion bombs)
+        entity_count = len(re.findall(r'<!ENTITY', content, re.IGNORECASE))
+        if entity_count > 10:
+            raise SecurityError("Security violation: too many XML entities")
+        
+        # Remove or disable DOCTYPE declarations with entities
+        # Simple approach: remove entire DOCTYPE section
+        content = re.sub(r'<!DOCTYPE[^>]*\[[^\]]*\]>', '', content, flags=re.DOTALL | re.IGNORECASE)
+        content = re.sub(r'<!DOCTYPE[^>]*>', '', content, flags=re.IGNORECASE)
+        
+        # Create sanitized temporary file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False, encoding='utf-8') as tmp:
+            tmp.write(content)
+            return tmp.name
+            
+    except Exception as e:
+        if isinstance(e, SecurityError):
+            raise
+        raise SecurityError("Security violation: XML validation failed")
+
+
+def validate_json_security(file_path: str) -> str:
+    """
+    Validate and sanitize JSON files to prevent recursion bombs.
+    
+    Args:
+        file_path: Path to JSON file
+        
+    Returns:
+        Path to validated temporary file (or original if safe)
+        
+    Raises:
+        SecurityError: If JSON is too deeply nested or complex
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        # Check file size first
+        if len(content) > 10 * 1024 * 1024:  # 10MB limit
+            raise SecurityError("Security violation: JSON file too large")
+        
+        # Parse and analyze structure
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError:
+            # If it's not valid JSON, let MarkItDown handle it normally
+            return file_path
+        
+        # Check nesting depth
+        def check_depth(obj, current_depth=0, max_depth=30):
+            if current_depth > max_depth:
+                raise SecurityError("Security violation: JSON recursion depth limit exceeded")
+            
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    check_depth(value, current_depth + 1, max_depth)
+            elif isinstance(obj, list):
+                for item in obj:
+                    check_depth(item, current_depth + 1, max_depth)
+        
+        check_depth(data)
+        return file_path  # Return original file if safe
+        
+    except Exception as e:
+        if isinstance(e, SecurityError):
+            raise
+        # If validation fails, let MarkItDown handle it
+        return file_path
+
+
+def validate_csv_security(file_path: str) -> str:
+    """
+    Validate CSV files to prevent bombs and excessive resource usage.
+    
+    Args:
+        file_path: Path to CSV file
+        
+    Returns:
+        Path to original file if safe
+        
+    Raises:
+        SecurityError: If CSV is too large or complex
+    """
+    try:
+        # Check file size first
+        file_size = os.path.getsize(file_path)
+        if file_size > 50 * 1024 * 1024:  # 50MB limit
+            raise SecurityError("Security violation: CSV file too large")
+        
+        # Analyze CSV structure
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            # Read first few lines to check structure
+            sample = f.read(1024 * 1024)  # 1MB sample
+            
+        # Count columns and rows in sample
+        try:
+            dialect = csv.Sniffer().sniff(sample[:1024])
+            reader = csv.reader(sample.splitlines(), dialect=dialect)
+            
+            row_count = 0
+            max_cols = 0
+            
+            for row in reader:
+                row_count += 1
+                max_cols = max(max_cols, len(row))
+                
+                # Limits to prevent CSV bombs
+                if row_count > 100000:  # 100k rows limit for initial check
+                    raise SecurityError("Security violation: CSV too many rows")
+                if max_cols > 1000:  # 1000 columns limit
+                    raise SecurityError("Security violation: CSV too many columns")
+                if any(len(cell) > 10000 for cell in row):  # 10k chars per cell
+                    raise SecurityError("Security violation: CSV cell too large")
+                    
+        except csv.Error:
+            # If CSV parsing fails, let MarkItDown handle it
+            pass
+            
+        return file_path
+        
+    except Exception as e:
+        if isinstance(e, SecurityError):
+            raise
+        return file_path
+
+
+def validate_file_content_security(file_path: str) -> str:
+    """
+    Perform comprehensive security validation on file content before processing.
+    
+    Args:
+        file_path: Path to file to validate
+        
+    Returns:
+        Path to validated file (may be temporary sanitized version)
+        
+    Raises:
+        SecurityError: If file contains dangerous content
+    """
+    try:
+        # Get file type
+        mime_type, _ = mimetypes.guess_type(file_path)
+        file_ext = Path(file_path).suffix.lower()
+        
+        # Apply format-specific validation
+        if mime_type and 'xml' in mime_type or file_ext in ['.xml', '.xhtml']:
+            return validate_xml_security(file_path)
+        elif mime_type and 'json' in mime_type or file_ext == '.json':
+            return validate_json_security(file_path)
+        elif mime_type and 'csv' in mime_type or file_ext == '.csv':
+            return validate_csv_security(file_path)
+        
+        # General file size check
+        file_size = os.path.getsize(file_path)
+        if file_size > 100 * 1024 * 1024:  # 100MB general limit
+            raise SecurityError("Security violation: file too large")
+        
+        return file_path
+        
+    except Exception as e:
+        if isinstance(e, SecurityError):
+            raise
+        # If validation fails, let MarkItDown handle it
+        return file_path
 
 
 def secure_compare(a: str, b: str) -> bool:
@@ -138,7 +344,7 @@ def normalize_timing(func):
             success = False
 
         # Ensure minimum execution time to prevent timing differences
-        min_time = 0.1  # 100ms minimum
+        min_time = 0.05  # 50ms minimum
         elapsed = time.time() - start_time
         if elapsed < min_time:
             time.sleep(min_time - elapsed)
@@ -169,6 +375,10 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
         # Basic format check
         if not isinstance(data, str):
             raise SecurityError("Security violation: invalid base64 format")
+            
+        # Check for empty or too short strings
+        if not data or len(data.strip()) == 0:
+            raise SecurityError("Security violation: invalid base64 data - empty content")
 
         # Decode with validation
         decoded = base64.b64decode(data, validate=True)
@@ -247,12 +457,21 @@ def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
     # Set recursion limit
     original_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(100)  # Conservative limit
+    
+    sanitized_file_path = None
 
     try:
+        # Perform comprehensive security validation first
+        validated_file_path = validate_file_content_security(file_path)
+        
+        # Track if we created a temporary sanitized file
+        if validated_file_path != file_path:
+            sanitized_file_path = validated_file_path
+        
         # Check if file might contain binary data in text format
-        file_path_obj = Path(file_path)
+        file_path_obj = Path(validated_file_path)
         if file_path_obj.exists():
-            with open(file_path, "rb") as f:
+            with open(validated_file_path, "rb") as f:
                 data = f.read(1024)  # Read first 1KB to check
 
             # If it's a text file but contains significant binary content
@@ -260,7 +479,7 @@ def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
             try:
                 import mimetypes
 
-                mime_type = mimetypes.guess_type(file_path)[0]
+                mime_type = mimetypes.guess_type(validated_file_path)[0]
             except Exception:
                 pass
 
@@ -287,22 +506,34 @@ def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
                         finally:
                             Path(temp_path).unlink(missing_ok=True)
 
-        # Normal conversion
-        result = markitdown_instance.convert(file_path)
+        # Normal conversion with validated file
+        result = markitdown_instance.convert(validated_file_path)
 
         # Sanitize the result text
         if hasattr(result, "text_content") and result.text_content:
             result.text_content = sanitize_unicode_text(result.text_content)
+            
+            # Limit output size to prevent resource exhaustion  
+            max_output_size = 1 * 1024 * 1024  # 1MB (reduced from 5MB)
+            if len(result.text_content) > max_output_size:
+                result.text_content = result.text_content[:max_output_size] + "\n\n[Output truncated due to size limits]"
 
         return result
 
     except RecursionError:
-        raise SecurityError("Security violation: processing limit exceeded")
+        raise SecurityError("Security violation: recursion depth limit exceeded during processing")
     except Exception as e:
         if "recursion" in str(e).lower():
-            raise SecurityError("Security violation: processing limit exceeded")
+            raise SecurityError("Security violation: recursion depth limit exceeded during processing")
         raise
     finally:
+        # Clean up temporary sanitized file if created
+        if sanitized_file_path and sanitized_file_path != file_path:
+            try:
+                Path(sanitized_file_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+        
         # Restore original recursion limit
         sys.setrecursionlimit(original_limit)
 
@@ -352,7 +583,7 @@ def validate_and_sanitize_path(
 
         for pattern in dangerous_patterns:
             if pattern in path_str:
-                raise SecurityError("Security violation: access denied")
+                raise SecurityError("Security violation: invalid path")
 
         # Check for path traversal attempts in the original path
         if ".." in file_path:
@@ -369,12 +600,12 @@ def validate_and_sanitize_path(
                     str(path).startswith(allowed_dir) for allowed_dir in resolved_allowed_dirs
                 )
                 if not is_allowed:
-                    raise SecurityError("Security violation: access denied")
+                    raise SecurityError("Security violation: invalid path")
             else:
                 # If no allowed dirs specified, check against temp directory
                 temp_dir = Path(tempfile.gettempdir()).resolve()
                 if not str(path).startswith(str(temp_dir)):
-                    raise SecurityError("Security violation: access denied")
+                    raise SecurityError("Security violation: invalid path")
 
         # Check file extension for potentially dangerous files
         dangerous_extensions = [
@@ -398,7 +629,7 @@ def validate_and_sanitize_path(
 
         # Additional checks for hidden/system files
         if path.name.startswith(".") and path.name in [".passwd", ".shadow", ".ssh", ".htaccess"]:
-            raise SecurityError("Security violation: access denied")
+            raise SecurityError("Security violation: invalid path")
 
         return path, True
 
@@ -664,7 +895,7 @@ class MarkItDownMCPServer:
                     },
                 )
 
-            elif file_content and filename:
+            elif file_content is not None and filename:
                 # Convert from base64 encoded content
                 try:
                     # Validate and decode base64 content
