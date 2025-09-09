@@ -511,7 +511,8 @@ class MarkItDownMCPServer:
                         },
                     )
             else:
-                validated_output_dir = validated_input_dir / "converted_markdown"
+                # Create output directory as sibling to input directory to avoid recursion
+                validated_output_dir = validated_input_dir.parent / f"{validated_input_dir.name}_converted_markdown"
 
             if not validated_input_dir.exists():
                 return MCPResponse(
