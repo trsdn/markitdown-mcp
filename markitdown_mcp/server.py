@@ -612,6 +612,14 @@ class MarkItDownMCPServer:
             filename = arguments.get("filename")
 
             if file_path:
+                # Check if file exists first (basic check)
+                basic_path = Path(file_path)
+                if not basic_path.exists():
+                    return MCPResponse(
+                        id=request_id,
+                        error={"code": -32602, "message": f"File not found: {file_path}"},
+                    )
+
                 # Convert from file path with security validation
                 try:
                     # Validate and sanitize the file path
@@ -625,12 +633,6 @@ class MarkItDownMCPServer:
                     return MCPResponse(
                         id=request_id,
                         error={"code": -32602, "message": str(e)},
-                    )
-
-                if not validated_path.exists():
-                    return MCPResponse(
-                        id=request_id,
-                        error={"code": -32602, "message": f"File not found: {file_path}"},
                     )
 
                 # Check if file is readable
