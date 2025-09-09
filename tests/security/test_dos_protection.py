@@ -5,6 +5,7 @@ Tests server resilience against various DoS attack vectors.
 
 import asyncio
 import base64
+import gc
 import json
 import os
 import random
@@ -19,12 +20,43 @@ from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_success_response
 
 
+@pytest.fixture(autouse=True)
+async def cleanup_servers():
+    """Automatically clean up server resources after each test."""
+    yield  # Run the test
+    
+    # Force cleanup of any lingering resources
+    gc.collect()
+    
+    # Give asyncio a chance to clean up any pending tasks
+    await asyncio.sleep(0.01)
+
+
 class DoSAttackSimulator:
     """Simulate various DoS attack scenarios."""
 
     def __init__(self):
         self.server = MarkItDownMCPServer()
         self.attack_results = []
+        
+    def __del__(self):
+        """Ensure cleanup when simulator is destroyed."""
+        try:
+            if hasattr(self, 'server'):
+                self.server = None
+            if hasattr(self, 'attack_results'):
+                self.attack_results.clear()
+        except:
+            pass  # Ignore cleanup errors during destruction
+    
+    async def cleanup(self):
+        """Clean up server resources."""
+        # Clear any references that might keep the server alive
+        self.server = None
+        self.attack_results.clear()
+        
+        # Force garbage collection
+        gc.collect()
 
     async def simulate_request_flood(
         self, num_requests: int, delay: float = 0

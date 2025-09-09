@@ -144,18 +144,13 @@ jobs:
         python tests/test_data_generator.py
         
     - name: Run security tests
-      timeout-minutes: 15
       run: |
-        echo "Starting security tests..."
         pytest tests/security/ -v --tb=short -m "security"
-        echo "Security tests completed."
         
     - name: Run Bandit security linter
       run: |
-        echo "Starting Bandit security linter..."
         bandit -r markitdown_mcp/ -f json -o bandit-report.json || true
         bandit -r markitdown_mcp/ -f txt
-        echo "Bandit completed."
         
     - name: Check dependencies for known vulnerabilities
       run: |
