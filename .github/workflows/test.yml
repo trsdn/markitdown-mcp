@@ -144,8 +144,11 @@ jobs:
         python tests/test_data_generator.py
         
     - name: Run security tests
+      env:
+        CI: true
       run: |
-        pytest tests/security/ -v --tb=short -m "security"
+        echo "CI environment: CI=$CI"
+        pytest tests/security/ -v --tb=short -m "security" -s
         
     - name: Run Bandit security linter
       run: |

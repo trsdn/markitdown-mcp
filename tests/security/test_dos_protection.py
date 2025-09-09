@@ -22,15 +22,22 @@ from tests.helpers.assertions import assert_mcp_success_response
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def cleanup_servers():
+async def cleanup_servers(request):
     """Automatically clean up server resources after each test."""
+    test_name = request.node.name
+    print(f"\n[SETUP] Starting test: {test_name}")
+    
     yield  # Run the test
+    
+    print(f"[TEARDOWN] Cleaning up after: {test_name}")
     
     # Force cleanup of any lingering resources
     gc.collect()
     
     # Give asyncio a chance to clean up any pending tasks
     await asyncio.sleep(0.01)
+    
+    print(f"[TEARDOWN] Cleanup complete for: {test_name}")
 
 
 class DoSAttackSimulator:
@@ -306,6 +313,7 @@ class DoSAttackSimulator:
 
     async def _complex_processing_attack(self, temp_dir: str = None) -> Dict[str, Any]:
         """Attack with computationally complex files."""
+        print(f"[ATTACK] _complex_processing_attack: Starting (CI={os.environ.get('CI', 'false')})")
         if temp_dir is None:
             temp_dir = tempfile.mkdtemp()
 
@@ -313,6 +321,7 @@ class DoSAttackSimulator:
         # Reduced complexity to prevent exponential memory growth
         complex_data = {"level": 0, "data": "root"}
         max_depth = 20 if os.environ.get('CI') else 50  # Less depth in CI
+        print(f"[ATTACK] _complex_processing_attack: Building nested JSON with depth={max_depth}")
         for i in range(max_depth):
             complex_data = {
                 "level": i + 1,
@@ -326,10 +335,15 @@ class DoSAttackSimulator:
             }
 
         complex_file = Path(temp_dir) / "dos_complex.json"
+        print(f"[ATTACK] _complex_processing_attack: Nested structure built")
 
         try:
+            print(f"[ATTACK] _complex_processing_attack: Writing JSON to {complex_file}")
             with open(complex_file, "w") as f:
                 json.dump(complex_data, f)
+            
+            file_size_mb = complex_file.stat().st_size / (1024 * 1024)
+            print(f"[ATTACK] _complex_processing_attack: JSON file created, size={file_size_mb:.2f}MB")
 
             request = MCPRequest(
                 id="dos-complex-processing",
@@ -337,9 +351,11 @@ class DoSAttackSimulator:
                 params={"name": "convert_file", "arguments": {"file_path": str(complex_file)}},
             )
 
+            print("[ATTACK] _complex_processing_attack: Sending request to server")
             start_time = time.time()
             response = await self.server.handle_request(request)
             end_time = time.time()
+            print(f"[ATTACK] _complex_processing_attack: Server responded in {end_time-start_time:.2f}s")
 
             return {
                 "attack_type": "complex_processing",
@@ -534,9 +550,11 @@ class TestResourceExhaustionProtection:
     @pytest.mark.timeout(20)  # 20 second timeout
     async def test_base64_bomb_dos_protection(self):
         """Test protection against base64 bomb DoS."""
+        print("[TEST] test_base64_bomb_dos_protection: Starting")
         simulator = DoSAttackSimulator()
 
         result = await simulator.simulate_resource_exhaustion_attack("base64_bomb")
+        print("[TEST] test_base64_bomb_dos_protection: Completed successfully")
 
         # Should complete without hanging
         assert result["completed"], "Base64 bomb attack didn't complete"
@@ -558,11 +576,14 @@ class TestResourceExhaustionProtection:
     @pytest.mark.asyncio
     async def test_complex_processing_dos_protection(self, temp_dir):
         """Test protection against complex processing DoS."""
+        print("[TEST] test_complex_processing_dos_protection: Creating simulator")
         simulator = DoSAttackSimulator()
 
+        print("[TEST] test_complex_processing_dos_protection: Starting attack simulation")
         result = await simulator.simulate_resource_exhaustion_attack(
             "complex_processing", temp_dir=temp_dir
         )
+        print(f"[TEST] test_complex_processing_dos_protection: Attack completed - {result.get('completed', False)}")
 
         # Should complete without hanging
         assert result["completed"], "Complex processing attack didn't complete"
