@@ -6,11 +6,17 @@ Converts various file formats to Markdown using Microsoft's MarkItDown library.
 
 import asyncio
 import base64
+import functools
+import hmac
 import json
 import logging
 import os
+import signal
 import sys
 import tempfile
+import threading
+import time
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -26,6 +32,268 @@ class SecurityError(Exception):
     """Raised when a security violation is detected."""
 
 
+class TimeoutError(Exception):
+    """Raised when an operation times out."""
+
+
+def timeout_handler(signum, frame):
+    """Handler for timeout signal."""
+    raise TimeoutError("Operation timed out")
+
+
+def with_timeout(timeout_seconds=30):
+    """Decorator to add timeout protection to functions."""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            # Set up timeout handler
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout_seconds)
+            try:
+                result = func(*args, **kwargs)
+                return result
+            finally:
+                # Reset alarm and handler
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
+        return wrapper
+    return decorator
+
+
+def sanitize_unicode_text(text: str) -> str:
+    """
+    Sanitize Unicode text by normalizing and removing dangerous characters.
+    
+    Args:
+        text: Input text to sanitize
+        
+    Returns:
+        Sanitized text
+    """
+    if not isinstance(text, str):
+        return str(text)
+    
+    # Unicode normalization
+    text = unicodedata.normalize('NFKC', text)
+    
+    # Remove Bidi override characters and other potentially dangerous Unicode
+    dangerous_chars = [
+        '\u202E',  # RIGHT-TO-LEFT OVERRIDE
+        '\u202D',  # LEFT-TO-RIGHT OVERRIDE
+        '\u2066',  # LEFT-TO-RIGHT ISOLATE
+        '\u2067',  # RIGHT-TO-LEFT ISOLATE
+        '\u2068',  # FIRST STRONG ISOLATE
+        '\u2069',  # POP DIRECTIONAL ISOLATE
+    ]
+    
+    for char in dangerous_chars:
+        text = text.replace(char, '')
+    
+    return text
+
+
+def secure_compare(a: str, b: str) -> bool:
+    """
+    Perform constant-time string comparison to prevent timing attacks.
+    
+    Args:
+        a: First string
+        b: Second string
+        
+    Returns:
+        True if strings are equal
+    """
+    return hmac.compare_digest(str(a).encode(), str(b).encode())
+
+
+def normalize_timing(func):
+    """
+    Decorator to normalize execution time and prevent timing attacks.
+    
+    Args:
+        func: Function to wrap
+        
+    Returns:
+        Wrapped function with normalized timing
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            success = True
+        except Exception as e:
+            result = e
+            success = False
+        
+        # Ensure minimum execution time to prevent timing differences
+        min_time = 0.1  # 100ms minimum
+        elapsed = time.time() - start_time
+        if elapsed < min_time:
+            time.sleep(min_time - elapsed)
+        
+        if success:
+            return result
+        else:
+            raise result
+    
+    return wrapper
+
+
+def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
+    """
+    Validate and decode base64 data with size limits.
+    
+    Args:
+        data: Base64 encoded string
+        max_size: Maximum allowed decoded size in bytes
+        
+    Returns:
+        Decoded bytes
+        
+    Raises:
+        SecurityError: If validation fails
+    """
+    try:
+        # Basic format check
+        if not isinstance(data, str):
+            raise SecurityError("Security violation: invalid base64 format")
+        
+        # Decode with validation
+        decoded = base64.b64decode(data, validate=True)
+        
+        # Check size limit
+        if len(decoded) > max_size:
+            raise SecurityError("Security violation: file too large")
+        
+        return decoded
+        
+    except Exception as e:
+        raise SecurityError("Security violation: invalid base64 data")
+
+
+def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
+    """
+    Extract readable text from potentially binary data.
+    
+    Args:
+        data: Binary data
+        filename: Optional filename for context
+        
+    Returns:
+        Extracted text or None if no readable content found
+    """
+    try:
+        # Try UTF-8 first
+        try:
+            text = data.decode('utf-8')
+            # Check if it contains reasonable amount of printable characters
+            printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
+            if printable_ratio > 0.7:  # At least 70% printable
+                return text
+        except UnicodeDecodeError:
+            pass
+        
+        # Try other common encodings
+        encodings = ['latin1', 'cp1252', 'iso-8859-1']
+        for encoding in encodings:
+            try:
+                text = data.decode(encoding, errors='ignore')
+                printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
+                if printable_ratio > 0.7:
+                    return text
+            except:
+                continue
+        
+        # Extract printable ASCII characters as fallback
+        printable_chars = ''.join(chr(b) for b in data if 32 <= b <= 126 or b in [9, 10, 13])
+        if len(printable_chars) > 20:  # At least some readable content
+            return printable_chars
+        
+        return None
+        
+    except Exception:
+        return None
+
+
+@with_timeout(30)
+def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
+    """
+    Safely convert a file with timeout and recursion protection.
+    
+    Args:
+        markitdown_instance: MarkItDown instance
+        file_path: Path to file to convert
+        
+    Returns:
+        Conversion result
+        
+    Raises:
+        TimeoutError: If conversion times out
+        RecursionError: If recursion limit is exceeded
+        SecurityError: For security violations
+    """
+    # Set recursion limit
+    original_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(100)  # Conservative limit
+    
+    try:
+        # Check if file might contain binary data in text format
+        file_path_obj = Path(file_path)
+        if file_path_obj.exists():
+            with open(file_path, 'rb') as f:
+                data = f.read(1024)  # Read first 1KB to check
+                
+            # If it's a text file but contains significant binary content
+            mime_type = None
+            try:
+                import mimetypes
+                mime_type = mimetypes.guess_type(file_path)[0]
+            except:
+                pass
+                
+            if mime_type and mime_type.startswith('text/'):
+                # For text files, extract readable content if binary data present
+                try:
+                    # Test if it's valid text
+                    data.decode('utf-8')
+                except UnicodeDecodeError:
+                    # Contains binary data, extract text portions
+                    extracted_text = extract_text_from_binary(data, str(file_path_obj))
+                    if extracted_text:
+                        # Create temporary file with extracted text
+                        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tmp:
+                            tmp.write(extracted_text)
+                            temp_path = tmp.name
+                        try:
+                            result = markitdown_instance.convert(temp_path)
+                            if hasattr(result, 'text_content') and result.text_content:
+                                result.text_content = sanitize_unicode_text(result.text_content)
+                            return result
+                        finally:
+                            Path(temp_path).unlink(missing_ok=True)
+        
+        # Normal conversion
+        result = markitdown_instance.convert(file_path)
+        
+        # Sanitize the result text
+        if hasattr(result, 'text_content') and result.text_content:
+            result.text_content = sanitize_unicode_text(result.text_content)
+        
+        return result
+        
+    except RecursionError:
+        raise SecurityError("Security violation: processing limit exceeded")
+    except Exception as e:
+        if "recursion" in str(e).lower():
+            raise SecurityError("Security violation: processing limit exceeded")
+        raise
+    finally:
+        # Restore original recursion limit
+        sys.setrecursionlimit(original_limit)
+
+
+@normalize_timing
 def validate_and_sanitize_path(
     file_path: str, allowed_dirs: Optional[List[str]] = None
 ) -> Tuple[Path, bool]:
@@ -70,11 +338,11 @@ def validate_and_sanitize_path(
 
         for pattern in dangerous_patterns:
             if pattern in path_str:
-                raise SecurityError(f"Access to system directory denied: {pattern}")
+                raise SecurityError("Security violation: access denied")
 
         # Check for path traversal attempts in the original path
         if ".." in file_path:
-            raise SecurityError(f"Path traversal attempts are not allowed: {file_path}")
+            raise SecurityError("Security violation: path traversal detected")
 
         # For absolute paths, check if they're in allowed directories
         if file_path.startswith("/") or (len(file_path) > 2 and file_path[1] == ":"):
@@ -87,12 +355,12 @@ def validate_and_sanitize_path(
                     str(path).startswith(allowed_dir) for allowed_dir in resolved_allowed_dirs
                 )
                 if not is_allowed:
-                    raise SecurityError(f"Absolute path not in allowed directories: {file_path}")
+                    raise SecurityError("Security violation: access denied")
             else:
                 # If no allowed dirs specified, check against temp directory
                 temp_dir = Path(tempfile.gettempdir()).resolve()
                 if not str(path).startswith(str(temp_dir)):
-                    raise SecurityError(f"Absolute path not in safe directory: {file_path}")
+                    raise SecurityError("Security violation: access denied")
 
         # Check file extension for potentially dangerous files
         dangerous_extensions = [
@@ -112,16 +380,16 @@ def validate_and_sanitize_path(
         ]
 
         if path.suffix.lower() in dangerous_extensions:
-            raise SecurityError(f"Dangerous file type not allowed: {path.suffix}")
+            raise SecurityError("Security violation: file type not allowed")
 
         # Additional checks for hidden/system files
         if path.name.startswith(".") and path.name in [".passwd", ".shadow", ".ssh", ".htaccess"]:
-            raise SecurityError(f"System file access denied: {path.name}")
+            raise SecurityError("Security violation: access denied")
 
         return path, True
 
     except (OSError, ValueError) as e:
-        raise SecurityError(f"Invalid file path: {e}")
+        raise SecurityError("Security violation: invalid path")
 
 
 def get_safe_working_directories() -> List[str]:
@@ -358,7 +626,13 @@ class MarkItDownMCPServer:
                         error={"code": -32602, "message": f"File not readable: {file_path}"},
                     )
 
-                result = self.markitdown.convert(str(validated_path))
+                try:
+                    result = safe_convert_with_limits(self.markitdown, str(validated_path))
+                except (TimeoutError, SecurityError) as e:
+                    return MCPResponse(
+                        id=request_id,
+                        error={"code": -32602, "message": f"Security violation: {str(e)}"},
+                    )
                 markdown_content = result.text_content
 
                 return MCPResponse(
@@ -377,8 +651,8 @@ class MarkItDownMCPServer:
             elif file_content and filename:
                 # Convert from base64 encoded content
                 try:
-                    # Decode base64 content
-                    decoded_content = base64.b64decode(file_content)
+                    # Validate and decode base64 content
+                    decoded_content = validate_base64(file_content)
 
                     # Create temporary file
                     with tempfile.NamedTemporaryFile(
@@ -388,7 +662,7 @@ class MarkItDownMCPServer:
                         temp_path = temp_file.name
 
                     try:
-                        result = self.markitdown.convert(temp_path)
+                        result = safe_convert_with_limits(self.markitdown, temp_path)
                         markdown_content = result.text_content
 
                         return MCPResponse(
@@ -547,9 +821,9 @@ class MarkItDownMCPServer:
                         output_path = validated_output_dir / relative_path.with_suffix(".md")
                         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-                        # Use asyncio to run blocking operations
+                        # Use asyncio to run blocking operations with timeout protection
                         result = await asyncio.get_event_loop().run_in_executor(
-                            None, self.markitdown.convert, str(file_path)
+                            None, safe_convert_with_limits, self.markitdown, str(file_path)
                         )
                         markdown_content = result.text_content
 
