@@ -15,12 +15,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import pytest
+import pytest_asyncio
 
 from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
 from tests.helpers.assertions import assert_mcp_success_response
 
 
-@pytest.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True)
 async def cleanup_servers():
     """Automatically clean up server resources after each test."""
     yield  # Run the test
