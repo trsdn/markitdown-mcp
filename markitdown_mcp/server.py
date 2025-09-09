@@ -37,18 +37,18 @@ class TimeoutError(Exception):
     """Raised when an operation times out."""
 
 
-def with_timeout(timeout_seconds=30):
+def with_timeout(timeout_seconds: int = 30) -> Any:
     """Decorator to add timeout protection to functions using threading."""
 
-    def decorator(func):
+    def decorator(func: Any) -> Any:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             import threading
 
-            result = [None]
-            exception = [None]
+            result: List[Any] = [None]
+            exception: List[Optional[Exception]] = [None]
 
-            def target():
+            def target() -> None:
                 try:
                     result[0] = func(*args, **kwargs)
                 except Exception as e:
@@ -192,7 +192,7 @@ def validate_json_security(file_path: str) -> str:
             return file_path
 
         # Check nesting depth
-        def check_depth(obj, current_depth=0, max_depth=30):
+        def check_depth(obj: Any, current_depth: int = 0, max_depth: int = 30) -> None:
             if current_depth > max_depth:
                 raise SecurityError("Security violation: JSON recursion depth limit exceeded")
 
@@ -323,7 +323,7 @@ def secure_compare(a: str, b: str) -> bool:
     return hmac.compare_digest(str(a).encode(), str(b).encode())
 
 
-def normalize_timing(func):
+def normalize_timing(func: Any) -> Any:
     """
     Decorator to normalize execution time and prevent timing attacks.
 
@@ -335,7 +335,7 @@ def normalize_timing(func):
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
         try:
             result = func(*args, **kwargs)
@@ -438,8 +438,8 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
         return None
 
 
-@with_timeout(30)
-def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
+@with_timeout(30)  # type: ignore[misc]
+def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) -> Any:
     """
     Safely convert a file with timeout and recursion protection.
 
@@ -685,7 +685,7 @@ class MCPResponse:
 
 
 class MarkItDownMCPServer:
-    def __init__(self):
+    def __init__(self) -> None:
         self.markitdown = MarkItDown()
         self.supported_extensions = {
             # Office documents
@@ -1092,7 +1092,7 @@ class MarkItDownMCPServer:
                         markdown_content = result.text_content
 
                         # Write file asynchronously
-                        def write_file():
+                        def write_file() -> None:
                             with open(output_path, "w", encoding="utf-8") as f:
                                 f.write(markdown_content)
 
@@ -1132,7 +1132,7 @@ class MarkItDownMCPServer:
                 error={"code": -32603, "message": f"Directory conversion failed: {str(e)}"},
             )
 
-    async def run(self):
+    async def run(self) -> None:
         """Run the MCP server"""
         logger.info("MarkItDown MCP Server starting...")
 
@@ -1155,7 +1155,7 @@ class MarkItDownMCPServer:
                     response = await self.handle_request(request)
 
                     # Send response
-                    response_dict = {"jsonrpc": "2.0", "id": response.id}
+                    response_dict: Dict[str, Any] = {"jsonrpc": "2.0", "id": response.id}
                     if response.result is not None:
                         response_dict["result"] = response.result
                     if response.error is not None:
@@ -1174,10 +1174,10 @@ class MarkItDownMCPServer:
             logger.error(f"Server error: {e}")
 
 
-def main():
+def main() -> None:
     """Main entry point for console script"""
 
-    async def run_server():
+    async def run_server() -> None:
         server = MarkItDownMCPServer()
         await server.run()
 
