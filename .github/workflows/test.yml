@@ -144,9 +144,10 @@ jobs:
         python tests/test_data_generator.py
         
     - name: Run security tests
+      timeout-minutes: 15
       run: |
         echo "Starting security tests..."
-        timeout 600 pytest tests/security/ -v --tb=short -m "security" --timeout=300 || echo "Security tests timed out or failed"
+        pytest tests/security/ -v --tb=short -m "security"
         echo "Security tests completed."
         
     - name: Run Bandit security linter
