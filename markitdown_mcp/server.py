@@ -13,7 +13,6 @@ import logging
 import os
 import sys
 import tempfile
-import threading
 import time
 import unicodedata
 from dataclasses import dataclass
@@ -180,7 +179,7 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
 
         return decoded
 
-    except Exception as e:
+    except Exception:
         raise SecurityError("Security violation: invalid base64 data")
 
 
@@ -214,7 +213,7 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
                 printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
                 if printable_ratio > 0.7:
                     return text
-            except:
+            except Exception:
                 continue
 
         # Extract printable ASCII characters as fallback
@@ -262,7 +261,7 @@ def safe_convert_with_limits(markitdown_instance, file_path: str) -> Any:
                 import mimetypes
 
                 mime_type = mimetypes.guess_type(file_path)[0]
-            except:
+            except Exception:
                 pass
 
             if mime_type and mime_type.startswith("text/"):
@@ -403,7 +402,7 @@ def validate_and_sanitize_path(
 
         return path, True
 
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError):
         raise SecurityError("Security violation: invalid path")
 
 
@@ -764,6 +763,17 @@ class MarkItDownMCPServer:
                     error={"code": -32602, "message": "Missing required argument: input_directory"},
                 )
 
+            # Check if directory exists first
+            input_path = Path(arguments["input_directory"])
+            if not input_path.exists():
+                return MCPResponse(
+                    id=request_id,
+                    error={
+                        "code": -32602,
+                        "message": f"Input directory not found: {arguments['input_directory']}",
+                    },
+                )
+
             # Security validation for input directory
             try:
                 validated_input_dir, is_safe = validate_and_sanitize_path(
@@ -777,7 +787,7 @@ class MarkItDownMCPServer:
                 logger.warning(f"Security violation blocked for directory: {e}")
                 return MCPResponse(
                     id=request_id,
-                    error={"code": -32602, "message": f"Security violation: {str(e)}"},
+                    error={"code": -32602, "message": str(e)},
                 )
 
             # Security validation for output directory if specified
