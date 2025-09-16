@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "markitdown": {
+      "command": "markitdown-mcp",
+      "args": [],
+      "description": "Convert documents to markdown format using MarkItDown",
+      "capabilities": {
+        "tools": [
+          {
+            "name": "convert_file",
+            "description": "Convert a single file to markdown format"
+          },
+          {
+            "name": "convert_directory",
+            "description": "Convert all supported files in a directory to markdown"
+          },
+          {
+            "name": "list_supported_formats",
+            "description": "List all supported file formats for conversion"
+          }
+        ]
+      }
+    }
+  }
+}

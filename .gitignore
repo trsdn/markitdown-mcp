@@ -1,28 +1,121 @@
+# ==============================================
 # Python
+# ==============================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
 venv/
 env/
 ENV/
+.venv/
+.env/
+test_env/
+pipenv/
 
-# Environment variables
+# ==============================================
+# Environment & Configuration
+# ==============================================
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE
+# ==============================================
+# IDE & Editors
+# ==============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+.classpath
 
-# OS
+# ==============================================
+# OS Generated Files
+# ==============================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Project specific
+# ==============================================
+# Build & Distribution
+# ==============================================
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+.wheel/
+wheels/
+*.manifest
+*.spec
+
+# ==============================================
+# Testing & Coverage
+# ==============================================
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.nyc_output
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.cache
+nosetests.xml
+coverage/
+junit.xml
+test-results.xml
+pytest-results.xml
+
+# ==============================================
+# Linting & Type Checking
+# ==============================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+pylint-report.txt
+flake8-report.txt
+bandit-report.json
+safety-report.json
+gitleaks-report.json
+
+# ==============================================
+# Documentation
+# ==============================================
+docs/_build/
+docs/.doctrees/
+.sphinx/
+site/
+
+# ==============================================
+# Jupyter Notebooks
+# ==============================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# ==============================================
+# Project Specific
+# ==============================================
 input/*
 output/*
 !input/.gitkeep
@@ -32,19 +125,64 @@ output/*
 *.tmp
 *.temp
 *.log
+*.bak
+*.backup
+*~
 
-# Build and distribution
-build/
-dist/
-*.egg-info/
+# Development scripts (keep tracked ones)
+test_*.py
+!tests/
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
+# Sample data directories
+sample_files/
+"sample files"/
+data/
+fixtures/test_data/
 
-# pytest cache
-.pytest_cache/
+# ==============================================
+# Security & Secrets
+# ==============================================
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.p7b
+*.p7r
+secrets.json
+.secrets
+credentials.json
 
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
+# ==============================================
+# Performance & Profiling
+# ==============================================
+.benchmarks/
+profile_results/
+*.prof
+*.lprof
+
+# ==============================================
+# Docker (if added later)
+# ==============================================
+.dockerignore
+Dockerfile.dev
+docker-compose.override.yml
+
+# ==============================================
+# Node.js (if frontend added)
+# ==============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==============================================
+# Logs
+# ==============================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*

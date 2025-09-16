@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "markitdown-converter": {
+      "command": "markitdown-mcp",
+      "args": [],
+      "description": "Universal document converter for Cursor IDE",
+      "timeout": 30000,
+      "capabilities": {
+        "maxRequestSize": "10MB",
+        "supportedFormats": [
+          "pdf", "docx", "pptx", "xlsx", "html", "xml", "csv", "json", "txt", "md"
+        ]
+      }
+    }
+  }
+}

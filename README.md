@@ -158,7 +158,7 @@ pipx install git+https://github.com/trsdn/markitdown-mcp.git && \
 pipx inject markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber pytesseract pydub speechrecognition
 
 # Or download and run the install script
-curl -sSL https://raw.githubusercontent.com/trsdn/markitdown-mcp/main/install-all-deps.sh | bash
+curl -sSL https://raw.githubusercontent.com/trsdn/markitdown-mcp/main/scripts/install-all-deps.sh | bash
 ```
 
 ### Quick Install (Basic Features Only)
@@ -384,14 +384,30 @@ markitdown-mcp  # Test the server works
 - 🎨 **Code Quality**: Refactor and optimize
 
 ### 📋 Contribution Process
-1. Read our [Contributing Guide](CONTRIBUTING.md)
+1. Read our [Contributing Guide](docs/development/CONTRIBUTING.md)
 2. Check [existing issues](https://github.com/trsdn/markitdown-mcp/issues)
 3. Fork the repository
 4. Create a feature branch (`feat/amazing-feature`)
 5. Make your changes with tests
 6. Submit a pull request
 
-**Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.**
+**Please read [docs/development/CONTRIBUTING.md](docs/development/CONTRIBUTING.md) for detailed guidelines.**
+
+## 📚 Documentation
+
+### For Users
+- **[Examples](examples/)** - MCP client configuration examples
+- **[Known Issues](docs/guides/KNOWN_ISSUES.md)** - Common problems and solutions
+- **[Changelog](CHANGELOG.md)** - Version history and updates
+
+### For AI Agents
+- **[AGENTS.md](AGENTS.md)** - Comprehensive guide for AI agent integration
+- **[API Documentation](docs/api/)** - Technical specifications and tool details
+
+### For Developers
+- **[Contributing Guide](docs/development/CONTRIBUTING.md)** - How to contribute
+- **[Testing Strategy](docs/development/TESTING_STRATEGY.md)** - Testing approach and guidelines
+- **[Documentation](docs/)** - Complete documentation index
 
 ## 📄 License
 
