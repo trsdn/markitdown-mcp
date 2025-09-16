@@ -1,0 +1,129 @@
+# Dependabot configuration for automated dependency updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # ==============================================
+  # Python Dependencies (pip)
+  # ==============================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "trsdn"
+    assignees:
+      - "trsdn"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    # Group related updates together
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
+      minor-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Allow both direct and indirect updates
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+        update-types: ["security-update"]
+    # Ignore specific packages if needed
+    ignore:
+      # Ignore major version updates for stable packages
+      - dependency-name: "markitdown"
+        update-types: ["version-update:semver-major"]
+
+  # ==============================================
+  # GitHub Actions Dependencies
+  # ==============================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "trsdn"
+    assignees:
+      - "trsdn"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    # Group GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ==============================================
+  # Docker Dependencies (if Dockerfile added later)
+  # ==============================================
+  # Uncomment when Docker support is added
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "tuesday"
+  #     time: "09:00"
+  #     timezone: "UTC"
+  #   open-pull-requests-limit: 3
+  #   reviewers:
+  #     - "trsdn"
+  #   commit-message:
+  #     prefix: "docker"
+  #   labels:
+  #     - "dependencies"
+  #     - "docker"
+
+# ==============================================
+# Configuration Notes:
+# ==============================================
+#
+# Security Updates:
+# - Dependabot will automatically create PRs for security updates
+# - Security updates are grouped together for easier review
+# - Both direct and transitive security updates are included
+#
+# Scheduling:
+# - Python deps: Monday 09:00 UTC
+# - GitHub Actions: Monday 10:00 UTC
+# - Staggered to avoid overwhelming CI
+#
+# PR Management:
+# - Limited number of open PRs to avoid noise
+# - Auto-assign to repository owner
+# - Descriptive commit messages with prefixes
+# - Proper labeling for easy filtering
+#
+# Grouping Strategy:
+# - Security updates grouped together (high priority)
+# - Minor/patch updates grouped together
+# - GitHub Actions grouped separately
+#
+# Customization:
+# - Add more reviewers in the reviewers section
+# - Adjust schedules based on team preferences
+# - Modify ignore patterns for specific packages
+# - Enable Docker/npm when those ecosystems are added

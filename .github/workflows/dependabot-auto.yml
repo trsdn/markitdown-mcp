@@ -1,0 +1,100 @@
+name: Dependabot Auto-approve
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+
+    steps:
+    - name: Check if PR is from Dependabot
+      id: check-dependabot
+      run: |
+        if [[ "${{ github.actor }}" == "dependabot[bot]" ]]; then
+          echo "is_dependabot=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_dependabot=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Get PR details
+      id: pr-details
+      if: steps.check-dependabot.outputs.is_dependabot == 'true'
+      run: |
+        # Extract dependency type and update type from PR title
+        PR_TITLE="${{ github.event.pull_request.title }}"
+
+        # Check if it's a minor/patch update
+        if echo "$PR_TITLE" | grep -qE "(patch|minor|deps:|deps-dev:)"; then
+          echo "is_minor_update=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_minor_update=false" >> $GITHUB_OUTPUT
+        fi
+
+        # Check if it's a security update
+        if echo "$PR_TITLE" | grep -qE "(security|vulnerability|CVE)"; then
+          echo "is_security_update=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_security_update=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Auto-approve security updates
+      if: steps.pr-details.outputs.is_security_update == 'true'
+      run: |
+        gh pr review --approve "${{ github.event.pull_request.number }}" \
+          --body "Auto-approving security update from Dependabot 🔒"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Auto-approve minor/patch updates
+      if: steps.pr-details.outputs.is_minor_update == 'true' && steps.pr-details.outputs.is_security_update == 'false'
+      run: |
+        gh pr review --approve "${{ github.event.pull_request.number }}" \
+          --body "Auto-approving minor/patch update from Dependabot ⚡"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Comment on major updates
+      if: steps.pr-details.outputs.is_minor_update == 'false' && steps.pr-details.outputs.is_security_update == 'false'
+      run: |
+        gh pr comment "${{ github.event.pull_request.number }}" \
+          --body "🚨 This is a **major version update** that requires manual review before merging. Please check for breaking changes."
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Auto-merge security and patch updates
+      if: (steps.pr-details.outputs.is_security_update == 'true' || steps.pr-details.outputs.is_minor_update == 'true') && github.event.pull_request.mergeable == true
+      run: |
+        # Wait for CI to complete before merging
+        sleep 30
+
+        # Check if all checks passed
+        gh pr checks "${{ github.event.pull_request.number }}" --watch
+
+        # Merge if all checks pass
+        gh pr merge "${{ github.event.pull_request.number }}" \
+          --squash \
+          --delete-branch \
+          --body "Auto-merged Dependabot update after successful CI ✅"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Add labels
+      if: steps.check-dependabot.outputs.is_dependabot == 'true'
+      run: |
+        # Add appropriate labels based on update type
+        if [[ "${{ steps.pr-details.outputs.is_security_update }}" == "true" ]]; then
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "security,auto-approved"
+        elif [[ "${{ steps.pr-details.outputs.is_minor_update }}" == "true" ]]; then
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "auto-approved"
+        else
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "needs-review"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

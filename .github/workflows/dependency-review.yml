@@ -3,6 +3,9 @@ name: Dependency Review
 on:
   pull_request:
     branches: [ main ]
+  # Also run on Dependabot PRs
+  pull_request_target:
+    branches: [ main ]
 
 permissions:
   contents: read
