@@ -61,7 +61,8 @@ class MemoryProfiler:
                         "current_mb": sum(stat.size for stat in top_stats) / (1024 * 1024),
                         "top_allocations": len(top_stats),
                     }
-            except:
+            except Exception:
+                # Ignore tracemalloc errors if not available
                 pass
 
         measurement = {

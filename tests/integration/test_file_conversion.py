@@ -647,8 +647,8 @@ class TestErrorScenariosIntegration:
             # Restore permissions for cleanup
             try:
                 test_file.chmod(0o644)
-            except:
-                pass
+            except (OSError, PermissionError):
+                pass  # Ignore permission restore errors
 
     @pytest.mark.integration
     @pytest.mark.asyncio

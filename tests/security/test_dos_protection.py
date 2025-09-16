@@ -58,7 +58,7 @@ class DoSAttackSimulator:
                 self.server = None
             if hasattr(self, "attack_results"):
                 self.attack_results.clear()
-        except:
+        except Exception:
             pass  # Ignore cleanup errors during destruction
 
     async def cleanup(self):
@@ -208,8 +208,8 @@ class DoSAttackSimulator:
             # Cleanup
             try:
                 large_file.unlink()
-            except:
-                pass
+            except (OSError, FileNotFoundError):
+                pass  # Ignore file cleanup errors
 
     async def _concurrent_attack(
         self, num_concurrent: int = 100, file_size_kb: int = 100
@@ -274,8 +274,8 @@ class DoSAttackSimulator:
             try:
                 test_file.unlink()
                 Path(temp_dir).rmdir()
-            except:
-                pass
+            except (OSError, FileNotFoundError):
+                pass  # Ignore file cleanup errors
 
     async def _base64_bomb_attack(self) -> Dict[str, Any]:
         """Attack with large base64 content."""
@@ -389,8 +389,8 @@ class DoSAttackSimulator:
             # Cleanup
             try:
                 complex_file.unlink()
-            except:
-                pass
+            except (OSError, FileNotFoundError):
+                pass  # Ignore file cleanup errors
 
 
 class TestRequestFloodProtection:

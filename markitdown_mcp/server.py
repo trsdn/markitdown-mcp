@@ -482,8 +482,8 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
                 import mimetypes
 
                 mime_type = mimetypes.guess_type(validated_file_path)[0]
-            except Exception:
-                pass
+            except (ImportError, OSError):
+                pass  # Ignore mime type detection errors
 
             if mime_type and mime_type.startswith("text/"):
                 # For text files, extract readable content if binary data present
@@ -540,8 +540,8 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
         if sanitized_file_path and sanitized_file_path != file_path:
             try:
                 Path(sanitized_file_path).unlink(missing_ok=True)
-            except Exception:
-                pass
+            except (OSError, PermissionError):
+                pass  # Ignore file cleanup errors
 
         # Restore original recursion limit
         sys.setrecursionlimit(original_limit)
