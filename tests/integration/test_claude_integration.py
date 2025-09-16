@@ -363,8 +363,8 @@ class TestClaudeDesktopCompatibility:
 
             elif tool["name"] == "list_supported_formats":
                 # Should accept empty arguments
-                properties = schema["properties"]
-                # May be empty for this tool
+                # May have empty properties for this tool
+                pass
 
             elif tool["name"] == "convert_directory":
                 properties = schema["properties"]

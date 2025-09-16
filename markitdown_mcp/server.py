@@ -424,8 +424,9 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
                 printable_ratio = sum(1 for c in text if c.isprintable() or c.isspace()) / len(text)
                 if printable_ratio > 0.7:
                     return text
-            except Exception:
-                continue
+            except (UnicodeDecodeError, AttributeError, ValueError):
+                # Skip this encoding and try the next one
+                pass
 
         # Extract printable ASCII characters as fallback
         printable_chars = "".join(chr(b) for b in data if 32 <= b <= 126 or b in [9, 10, 13])

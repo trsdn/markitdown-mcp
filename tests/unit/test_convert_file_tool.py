@@ -352,6 +352,7 @@ class TestConvertFileFormats:
     @pytest.mark.asyncio
     async def test_pdf_format_conversion(self, mcp_server, temp_dir):
         """Test PDF file conversion (requires dependencies)."""
+        pdf_file = None
         try:
             pdf_file = create_minimal_pdf(temp_dir)
         except Exception:

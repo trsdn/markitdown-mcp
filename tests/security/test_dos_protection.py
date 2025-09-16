@@ -49,6 +49,10 @@ class DoSAttackSimulator:
 
     def __del__(self):
         """Ensure cleanup when simulator is destroyed."""
+        self.cleanup_sync()
+
+    def cleanup_sync(self):
+        """Synchronous cleanup of resources."""
         try:
             if hasattr(self, "server"):
                 self.server = None
@@ -59,9 +63,7 @@ class DoSAttackSimulator:
 
     async def cleanup(self):
         """Clean up server resources."""
-        # Clear any references that might keep the server alive
-        self.server = None
-        self.attack_results.clear()
+        self.cleanup_sync()
 
         # Force garbage collection
         gc.collect()
@@ -456,14 +458,14 @@ class TestRequestFloodProtection:
         simulator = DoSAttackSimulator()
 
         # Test burst load (all at once)
-        burst_results = await simulator.simulate_request_flood(30, delay=0)
+        _burst_results = await simulator.simulate_request_flood(30, delay=0)
         burst_summary = simulator.attack_results[0]
 
         # Reset for sustained test
         simulator.attack_results.clear()
 
         # Test sustained load (with delays)
-        sustained_results = await simulator.simulate_request_flood(30, delay=0.1)
+        _sustained_results = await simulator.simulate_request_flood(30, delay=0.1)
         sustained_summary = simulator.attack_results[0]
 
         # Sustained load should perform better
@@ -853,7 +855,7 @@ class TestRecoveryFromDoSAttacks:
             print(f"Phase {i+1}: {phase['requests']} requests with {phase['delay']}s delay")
 
             phase_start = time.time()
-            results = await simulator.simulate_request_flood(
+            _results = await simulator.simulate_request_flood(
                 phase["requests"], delay=phase["delay"]
             )
             phase_time = time.time() - phase_start

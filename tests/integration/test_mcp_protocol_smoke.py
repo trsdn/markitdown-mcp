@@ -5,10 +5,8 @@ These tests verify that the server correctly implements the MCP protocol
 and can communicate with MCP clients without breaking wire protocol compatibility.
 """
 
-import asyncio
 import json
 import subprocess
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -107,7 +105,7 @@ class MCPProtocolTester:
         if response.result:
             assert "resources" in response.result
             return response.result["resources"]
-        elif response.error:
+        else:
             # This is acceptable - not all servers implement resources
             return None
 
@@ -155,7 +153,7 @@ class TestMCPProtocolCompliance:
             assert len(list_formats_result["content"]) > 0
 
         # Test 4: Resources (optional)
-        resources = await tester.test_resources_list()
+        _resources = await tester.test_resources_list()
         # Resources are optional, so we just verify the response format if present
 
         # Test 5: Error handling
