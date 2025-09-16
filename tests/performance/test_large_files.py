@@ -66,7 +66,12 @@ def create_large_text_file(size_mb: int, file_path: Path) -> str:
     """Create a large text file of specified size."""
     # Calculate approximate lines needed
     line_content = "This is line content for performance testing. " * 5  # ~240 chars per line
-    lines_needed = (size_mb * 1024 * 1024) // len(line_content.encode("utf-8"))
+    line_template = f"Line {{:06d}}: {line_content}\n"
+    line_size = len(line_template.format(0).encode("utf-8"))
+    lines_needed = (size_mb * 1024 * 1024) // line_size
+
+    # Add 5% buffer to ensure we meet minimum size
+    lines_needed = int(lines_needed * 1.05)
 
     with open(file_path, "w", encoding="utf-8") as f:
         for i in range(lines_needed):
@@ -81,6 +86,9 @@ def create_large_json_file(size_mb: int, file_path: Path) -> str:
     records = []
     record_size = 500  # Approximate bytes per record
     num_records = (size_mb * 1024 * 1024) // record_size
+
+    # Add buffer to ensure we meet minimum size
+    num_records = int(num_records * 1.1)  # Add 10% buffer for JSON formatting overhead
 
     for i in range(num_records):
         record = {
@@ -114,8 +122,14 @@ def create_large_csv_file(size_mb: int, file_path: Path) -> str:
     # Sample row (approximate size)
     sample_row = "123456,John Doe Smith,john.doe.smith@company.com,Engineering Department,75000.50,2024-01-01,Active,Some notes about this employee\n"
     row_size = len(sample_row.encode("utf-8"))
+    header_size = len(header_line.encode("utf-8"))
 
-    num_rows = (size_mb * 1024 * 1024) // row_size
+    # Calculate number of rows needed, accounting for header
+    target_size_bytes = size_mb * 1024 * 1024
+    num_rows = (target_size_bytes - header_size) // row_size
+
+    # Add extra rows to ensure we meet the minimum size
+    num_rows = int(num_rows * 1.15)  # Add 15% buffer
 
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(header_line)
@@ -232,7 +246,7 @@ class TestLargeFilePerformance:
         create_large_csv_file(8, large_file)
 
         actual_size_mb = large_file.stat().st_size / (1024 * 1024)
-        assert actual_size_mb >= 7, "File should be at least 7MB"
+        assert actual_size_mb >= 7, f"File should be at least 7MB, got {actual_size_mb:.2f}MB"
 
         monitor.start_monitoring()
 

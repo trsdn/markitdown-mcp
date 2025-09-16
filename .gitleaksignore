@@ -1,0 +1,7 @@
+# GitLeaks ignore file
+# Add specific fingerprints here for false positives
+# Format: filepath:rule:linenumber (get fingerprints from gitleaks output)
+
+# Example entries (uncomment and modify as needed):
+# tests/fixtures/test_secrets.txt:generic-api-key:1
+# docs/examples/sample_config.json:password:5

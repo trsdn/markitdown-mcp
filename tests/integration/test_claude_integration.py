@@ -647,10 +647,10 @@ class TestClaudeDesktopUserExperience:
 
         # Test directory conversion (longer operation) - specify output directory to avoid conflicts
         output_dir = Path(temp_dir) / "converted_output"
-        result = await simulator.call_tool("convert_directory", {
-            "input_directory": str(batch_dir),
-            "output_directory": str(output_dir)
-        })
+        result = await simulator.call_tool(
+            "convert_directory",
+            {"input_directory": str(batch_dir), "output_directory": str(output_dir)},
+        )
 
         assert result["success"] is True
 

@@ -26,17 +26,17 @@ async def cleanup_servers(request):
     """Automatically clean up server resources after each test."""
     test_name = request.node.name
     print(f"\n[SETUP] Starting test: {test_name}")
-    
+
     yield  # Run the test
-    
+
     print(f"[TEARDOWN] Cleaning up after: {test_name}")
-    
+
     # Force cleanup of any lingering resources
     gc.collect()
-    
+
     # Give asyncio a chance to clean up any pending tasks
     await asyncio.sleep(0.01)
-    
+
     print(f"[TEARDOWN] Cleanup complete for: {test_name}")
 
 
@@ -46,23 +46,23 @@ class DoSAttackSimulator:
     def __init__(self):
         self.server = MarkItDownMCPServer()
         self.attack_results = []
-        
+
     def __del__(self):
         """Ensure cleanup when simulator is destroyed."""
         try:
-            if hasattr(self, 'server'):
+            if hasattr(self, "server"):
                 self.server = None
-            if hasattr(self, 'attack_results'):
+            if hasattr(self, "attack_results"):
                 self.attack_results.clear()
         except:
             pass  # Ignore cleanup errors during destruction
-    
+
     async def cleanup(self):
         """Clean up server resources."""
         # Clear any references that might keep the server alive
         self.server = None
         self.attack_results.clear()
-        
+
         # Force garbage collection
         gc.collect()
 
@@ -278,7 +278,7 @@ class DoSAttackSimulator:
     async def _base64_bomb_attack(self) -> Dict[str, Any]:
         """Attack with large base64 content."""
         # Create large content - reduced for CI
-        size_multiplier = 1 if os.environ.get('CI') else 5
+        size_multiplier = 1 if os.environ.get("CI") else 5
         large_content = "DoS base64 bomb attack.\n" * (size_multiplier * 1024 * 1024)  # MB of text
         encoded_content = base64.b64encode(large_content.encode()).decode()
 
@@ -324,7 +324,7 @@ class DoSAttackSimulator:
         # Create deeply nested JSON that's expensive to parse
         # Reduced complexity to prevent exponential memory growth
         complex_data = {"level": 0, "data": "root"}
-        max_depth = 20 if os.environ.get('CI') else 50  # Less depth in CI
+        max_depth = 20 if os.environ.get("CI") else 50  # Less depth in CI
         print(f"[ATTACK] _complex_processing_attack: Building nested JSON with depth={max_depth}")
         for i in range(max_depth):
             complex_data = {
@@ -345,9 +345,11 @@ class DoSAttackSimulator:
             print(f"[ATTACK] _complex_processing_attack: Writing JSON to {complex_file}")
             with open(complex_file, "w") as f:
                 json.dump(complex_data, f)
-            
+
             file_size_mb = complex_file.stat().st_size / (1024 * 1024)
-            print(f"[ATTACK] _complex_processing_attack: JSON file created, size={file_size_mb:.2f}MB")
+            print(
+                f"[ATTACK] _complex_processing_attack: JSON file created, size={file_size_mb:.2f}MB"
+            )
 
             request = MCPRequest(
                 id="dos-complex-processing",
@@ -359,7 +361,9 @@ class DoSAttackSimulator:
             start_time = time.time()
             response = await self.server.handle_request(request)
             end_time = time.time()
-            print(f"[ATTACK] _complex_processing_attack: Server responded in {end_time-start_time:.2f}s")
+            print(
+                f"[ATTACK] _complex_processing_attack: Server responded in {end_time-start_time:.2f}s"
+            )
 
             return {
                 "attack_type": "complex_processing",
@@ -423,7 +427,7 @@ class TestRequestFloodProtection:
         simulator = DoSAttackSimulator()
 
         # Simulate heavy flood - reduced for CI
-        num_requests = 50 if os.environ.get('CI') else 200
+        num_requests = 50 if os.environ.get("CI") else 200
         await simulator.simulate_request_flood(num_requests)
 
         summary = simulator.attack_results[0]
@@ -490,7 +494,7 @@ class TestResourceExhaustionProtection:
         simulator = DoSAttackSimulator()
 
         # Test with progressively larger files - reduced for CI
-        file_sizes = [5, 10] if os.environ.get('CI') else [10, 25, 50]  # MB
+        file_sizes = [5, 10] if os.environ.get("CI") else [10, 25, 50]  # MB
 
         for size_mb in file_sizes:
             result = await simulator.simulate_resource_exhaustion_attack(
@@ -526,7 +530,7 @@ class TestResourceExhaustionProtection:
         simulator = DoSAttackSimulator()
 
         # Test with high concurrency - reduced for CI
-        num_concurrent = 25 if os.environ.get('CI') else 75
+        num_concurrent = 25 if os.environ.get("CI") else 75
         result = await simulator.simulate_resource_exhaustion_attack(
             "many_concurrent", num_concurrent=num_concurrent, file_size_kb=50
         )
@@ -587,7 +591,9 @@ class TestResourceExhaustionProtection:
         result = await simulator.simulate_resource_exhaustion_attack(
             "complex_processing", temp_dir=temp_dir
         )
-        print(f"[TEST] test_complex_processing_dos_protection: Attack completed - {result.get('completed', False)}")
+        print(
+            f"[TEST] test_complex_processing_dos_protection: Attack completed - {result.get('completed', False)}"
+        )
 
         # Should complete without hanging
         assert result["completed"], "Complex processing attack didn't complete"
@@ -826,19 +832,19 @@ class TestRecoveryFromDoSAttacks:
         simulator = DoSAttackSimulator()
 
         # Create sustained load over time - reduce for CI
-        if os.environ.get('CI'):
+        if os.environ.get("CI"):
             load_phases = [
-                {"requests": 5, "delay": 0.05},   # Light load
+                {"requests": 5, "delay": 0.05},  # Light load
                 {"requests": 10, "delay": 0.02},  # Medium load
                 {"requests": 15, "delay": 0.01},  # Heavy load
-                {"requests": 5, "delay": 0.05},   # Back to light load
+                {"requests": 5, "delay": 0.05},  # Back to light load
             ]
         else:
             load_phases = [
-                {"requests": 10, "delay": 0.1},   # Light load
+                {"requests": 10, "delay": 0.1},  # Light load
                 {"requests": 25, "delay": 0.05},  # Medium load
                 {"requests": 50, "delay": 0.02},  # Heavy load
-                {"requests": 10, "delay": 0.1},   # Back to light load
+                {"requests": 10, "delay": 0.1},  # Back to light load
             ]
 
         phase_results = []

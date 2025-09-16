@@ -639,7 +639,9 @@ class TestErrorScenariosIntegration:
             # Should handle permission error gracefully
             if response.error:
                 error_msg = response.error["message"].lower()
-                assert any(term in error_msg for term in ["permission", "access", "denied", "readable"])
+                assert any(
+                    term in error_msg for term in ["permission", "access", "denied", "readable"]
+                )
 
         finally:
             # Restore permissions for cleanup

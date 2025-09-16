@@ -1,0 +1,47 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v4
+      with:
+        # Fail on high or critical vulnerabilities
+        fail-on-severity: high
+
+        # Allow these common open-source licenses
+        allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, GPL-3.0, LGPL-2.1, LGPL-3.0
+
+        # Deny these problematic licenses
+        deny-licenses: AGPL-1.0, AGPL-3.0, GPL-2.0
+
+        # Create a comment on the PR with results
+        comment-summary-in-pr: true
+
+        # Show detailed vulnerability information
+        vulnerability-check: true
+
+        # Check license compatibility
+        license-check: true
+
+    - name: Upload dependency review report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-review-report
+        path: dependency-review-report.json
+        retention-days: 30

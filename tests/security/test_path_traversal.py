@@ -632,9 +632,7 @@ class TestInformationDisclosure:
             # - Malicious paths are rejected immediately for performance
             # - Legitimate files require actual processing time
             # The key is that we don't leak info about file existence on rejected paths
-            assert (
-                ratio < 5000
-            ), (
+            assert ratio < 5000, (
                 f"Timing difference too large: {ratio:.2f}x "
                 f"(existing: {existing_time:.3f}s, nonexistent: {nonexistent_time:.3f}s)"
             )
