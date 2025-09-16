@@ -321,7 +321,7 @@ jobs:
         from pathlib import Path
         
         # Check required documentation files exist
-        required_files = ['README.md', 'TESTING_STRATEGY.md', 'AGENT.md']
+        required_files = ['README.md', 'docs/development/TESTING_STRATEGY.md', 'AGENTS.md']
         missing_files = []
         
         for file in required_files:
