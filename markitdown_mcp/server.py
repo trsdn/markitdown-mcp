@@ -760,6 +760,65 @@ class MarkItDownMCPServer:
         self.safe_directories = get_safe_working_directories()
         logger.info(f"Initialized with safe directories: {self.safe_directories}")
 
+    def get_tools(self) -> list[dict[str, Any]]:
+        """Return the list of available tools for MCP schema validation."""
+        return [
+            {
+                "name": "convert_file",
+                "description": "Convert a file to Markdown using MarkItDown",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {
+                            "type": "string",
+                            "description": "Path to the file to convert",
+                        },
+                        "file_content": {
+                            "type": "string",
+                            "description": (
+                                "Base64 encoded file content "
+                                "(alternative to file_path)"
+                            ),
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Original filename when using "
+                            "file_content",
+                        },
+                    },
+                    "anyOf": [
+                        {"required": ["file_path"]},
+                        {"required": ["file_content", "filename"]},
+                    ],
+                },
+            },
+            {
+                "name": "list_supported_formats",
+                "description": "List all supported file formats for conversion",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
+            {
+                "name": "convert_directory",
+                "description": "Convert all supported files in a "
+                "directory to Markdown",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "input_directory": {
+                            "type": "string",
+                            "description": "Path to the input directory",
+                        },
+                        "output_directory": {
+                            "type": "string",
+                            "description": "Path to the output directory "
+                            "(optional)",
+                        },
+                    },
+                    "required": ["input_directory"],
+                },
+            },
+        ]
+
     async def handle_request(self, request: MCPRequest) -> MCPResponse:
         """Handle incoming MCP requests"""
         try:
@@ -994,6 +1053,8 @@ class MarkItDownMCPServer:
                 for word in ["security violation", "invalid path", "path traversal"]
             ):
                 safe_message = "Invalid file path"
+            elif "missingdependencyexception" in error_str or "dependency" in error_str:
+                safe_message = "Missing dependency - install markitdown with appropriate extras (e.g., markitdown[pdf])"
             else:
                 safe_message = "Conversion failed"
 

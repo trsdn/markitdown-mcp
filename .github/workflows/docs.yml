@@ -265,3 +265,4 @@ jobs:
           path: |
             coverage-report.md
             docs/coverage-badge.svg
+

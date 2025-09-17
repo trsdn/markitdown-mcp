@@ -506,6 +506,199 @@ def detect_emergency_release(commits):
     return False, "No critical security issues detected"
 ```
 
+## 🔧 CI/CD Maintenance Process
+
+### For AI Agents Working with CI/CD
+
+**CRITICAL**: CI/CD workflow changes require special handling to avoid infinite loops where workflows validate themselves.
+
+### When to Use CI/CD Maintenance Process
+
+Use the `ci-cd-maintenance` branch and process when making changes to:
+- GitHub Actions workflows (`.github/workflows/*.yml`)
+- CI/CD configuration files
+- Infrastructure-as-code files
+- Security-sensitive automation
+
+### CI/CD Maintenance Workflow
+
+```python
+async def update_cicd_infrastructure(changes_description):
+    """AI agent workflow for CI/CD changes."""
+
+    # 1. Create ci-cd-maintenance branch
+    await run_command("git checkout -b ci-cd-maintenance")
+
+    # 2. Make CI/CD changes
+    # ... implement changes ...
+
+    # 3. Commit changes with clear description
+    commit_message = f"ci: {changes_description}\n\nRequires manual review and merge"
+    await run_command(f"git commit -m '{commit_message}'")
+
+    # 4. Push to trigger CI/CD maintenance workflow
+    await run_command("git push origin ci-cd-maintenance")
+
+    # 5. Wait for validation
+    validation_result = await wait_for_workflow("ci-cd-maintenance.yml")
+
+    # 6. Create merge instructions
+    return generate_merge_instructions(validation_result)
+
+def generate_merge_instructions(validation_result):
+    """Generate clear instructions for manual merge."""
+    return f"""
+🔧 **CI/CD Maintenance Ready for Review**
+
+**Validation Status**: {validation_result.status}
+**Security Check**: {validation_result.security_status}
+
+**Manual Review Required**:
+1. Review workflow changes carefully
+2. Check for security implications
+3. Verify no circular dependencies
+4. Test rollback plan if needed
+
+**To merge**:
+```bash
+git checkout main
+git merge ci-cd-maintenance
+git push origin main
+git branch -d ci-cd-maintenance
+```
+
+**Rollback plan** (if issues found after merge):
+```bash
+git revert <merge-commit-hash>
+git push origin main
+```
+"""
+```
+
+### Security Considerations for CI/CD Changes
+
+AI agents must be extra careful with CI/CD changes:
+
+```python
+def validate_cicd_security(workflow_content):
+    """Security validation for workflow changes."""
+
+    security_issues = []
+
+    # Check for shell injection risks
+    if re.search(r'run:.*\$\{\{(?!github\.|inputs\.|secrets\.)', workflow_content):
+        security_issues.append("Potential shell injection with user input")
+
+    # Check for dangerous pull_request_target usage
+    if 'pull_request_target' in workflow_content and 'actions/checkout' in workflow_content:
+        security_issues.append("pull_request_target with checkout - verify safety")
+
+    # Check for secret exposure
+    if re.search(r'echo.*\$\{\{.*secrets\.', workflow_content):
+        security_issues.append("Potential secret exposure in echo statement")
+
+    return security_issues
+
+def safe_workflow_update(file_path, new_content):
+    """Safely update workflow files with validation."""
+
+    # Validate YAML syntax
+    try:
+        yaml.safe_load(new_content)
+    except yaml.YAMLError as e:
+        raise ValueError(f"Invalid YAML syntax: {e}")
+
+    # Security validation
+    security_issues = validate_cicd_security(new_content)
+    if security_issues:
+        raise SecurityError(f"Security issues found: {security_issues}")
+
+    # Write file
+    with open(file_path, 'w') as f:
+        f.write(new_content)
+
+    return f"Safely updated {file_path}"
+```
+
+### Common CI/CD Patterns for AI Agents
+
+**Adding new workflow**:
+```python
+def create_new_workflow(name, triggers, jobs):
+    """Template for creating new GitHub Actions workflows."""
+
+    workflow = {
+        'name': name,
+        'on': triggers,
+        'permissions': {
+            'contents': 'read',
+            'pull-requests': 'write'
+        },
+        'jobs': jobs
+    }
+
+    # Validate before writing
+    yaml_content = yaml.dump(workflow, default_flow_style=False)
+    return safe_workflow_update(f'.github/workflows/{name.lower()}.yml', yaml_content)
+```
+
+**Updating existing workflow**:
+```python
+def update_workflow_safely(file_path, updates):
+    """Safely update existing workflow with changes."""
+
+    # Read current workflow
+    with open(file_path, 'r') as f:
+        workflow = yaml.safe_load(f)
+
+    # Apply updates
+    for key, value in updates.items():
+        workflow[key] = value
+
+    # Convert back to YAML and validate
+    yaml_content = yaml.dump(workflow, default_flow_style=False)
+    return safe_workflow_update(file_path, yaml_content)
+```
+
+### Emergency CI/CD Fixes
+
+For broken CI that blocks development:
+
+1. **Create hotfix branch**: `ci-cd-hotfix-{issue}`
+2. **Minimal fix**: Only change what's necessary
+3. **Fast-track review**: Ping maintainer for immediate merge
+4. **Monitor closely**: Watch for issues after merge
+
+```python
+def emergency_cicd_fix(issue_description, fix_changes):
+    """Handle emergency CI/CD fixes."""
+
+    branch_name = f"ci-cd-hotfix-{issue_description.replace(' ', '-')}"
+
+    return f"""
+🚨 **EMERGENCY CI/CD FIX REQUIRED**
+
+**Issue**: {issue_description}
+**Branch**: {branch_name}
+**Changes**: {fix_changes}
+
+**URGENT**: This fix is needed to unblock development.
+Please review and merge immediately.
+
+**Risk Assessment**: [Explain why this is safe to merge quickly]
+**Testing**: [Describe how the fix was validated]
+"""
+```
+
+### Best Practices for AI Agents
+
+1. **Always use ci-cd-maintenance branch** for workflow changes
+2. **Never auto-merge CI/CD changes** - always require manual review
+3. **Validate thoroughly** before pushing changes
+4. **Provide clear review instructions** for humans
+5. **Plan rollback strategy** before making changes
+6. **Monitor CI health** after changes are merged
+
 ## 📚 Additional Resources
 
 - **[Release Process Guide](RELEASE.md)** - Complete release documentation

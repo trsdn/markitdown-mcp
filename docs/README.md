@@ -14,6 +14,7 @@ API documentation and technical specifications
 Development and contribution documentation
 - **[CONTRIBUTING.md](development/CONTRIBUTING.md)** - How to contribute to the project
 - **[TESTING_STRATEGY.md](development/TESTING_STRATEGY.md)** - Testing approach and guidelines
+- **[CI_CD_SYSTEM.md](development/CI_CD_SYSTEM.md)** - Complete CI/CD architecture and workflows
 
 ### `/guides/`
 User guides and troubleshooting

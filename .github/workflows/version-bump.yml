@@ -3,6 +3,7 @@ name: Automated Version Bump
 on:
   push:
     branches: [main]
+    branches-ignore: [ci-cd-maintenance]
   schedule:
     # Run weekly on Monday at 9 AM UTC
     - cron: '0 9 * * 1'
@@ -55,8 +56,8 @@ jobs:
         run: |
           python scripts/analyze-version.py \
             "${{ steps.latest-tag.outputs.latest-tag }}" \
-            "${{ inputs.force_bump }}" \
-            "${{ inputs.bump_type }}"
+            "${{ inputs.force_bump || 'false' }}" \
+            "${{ inputs.bump_type || 'auto' }}"
 
   create-version-bump:
     name: Create Version Bump PR

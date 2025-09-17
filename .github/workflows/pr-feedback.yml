@@ -1,0 +1,326 @@
+name: PR Feedback & Issue Reporting
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches-ignore: [ci-cd-maintenance]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+# Cancel duplicate runs
+concurrency:
+  group: pr-feedback-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Comprehensive Issue Detection & Reporting
+  # ==========================================
+  detect-and-report-issues:
+    name: Detect & Report Issues
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff analysis
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install analysis tools
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,test]"
+          pip install ruff mypy bandit safety vulture
+
+      - name: Run comprehensive issue detection
+        id: issues
+        run: |
+          echo "## 🔍 PR Analysis Results" > pr-feedback.md
+          echo "" >> pr-feedback.md
+          echo "**PR**: #${{ github.event.number }} | **Commit**: \`${{ github.sha }}\`" >> pr-feedback.md
+          echo "" >> pr-feedback.md
+
+          # Initialize counters
+          format_issues=0
+          lint_issues=0
+          type_issues=0
+          security_issues=0
+          total_issues=0
+
+          # ===================
+          # 1. Format Issues
+          # ===================
+          echo "### 🎨 Code Formatting" >> pr-feedback.md
+          if ! ruff format --check . > format_output.txt 2>&1; then
+            format_issues=$(ruff format --check . 2>&1 | grep -c "would reformat" || echo "0")
+            echo "❌ **$format_issues file(s) need formatting**" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "<details><summary>Click to see formatting issues</summary>" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo '```' >> pr-feedback.md
+            ruff format --check . 2>&1 | head -20 >> pr-feedback.md
+            echo '```' >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "**Fix**: Run \`ruff format .\` to fix all formatting issues" >> pr-feedback.md
+            echo "</details>" >> pr-feedback.md
+            total_issues=$((total_issues + format_issues))
+          else
+            echo "✅ **All files properly formatted**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # 2. Linting Issues
+          # ===================
+          echo "### 🔧 Code Linting" >> pr-feedback.md
+          if ! ruff check . --output-format=json > lint_output.json 2>/dev/null; then
+            lint_issues=$(jq length lint_output.json)
+            echo "❌ **$lint_issues linting issue(s) found**" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "<details><summary>Click to see linting issues</summary>" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+
+            # Group issues by severity and file
+            echo "#### 🚨 Issues by File:" >> pr-feedback.md
+            jq -r '
+              group_by(.filename) |
+              .[] |
+              "**" + .[0].filename + ":**\n" +
+              (map("- Line " + (.location.row | tostring) + ": " + .message + " (" + .code + ")") | join("\n"))
+            ' lint_output.json >> pr-feedback.md
+
+            echo "" >> pr-feedback.md
+            echo "**Fix**: Run \`ruff check . --fix\` to auto-fix issues, or manually address remaining ones" >> pr-feedback.md
+            echo "</details>" >> pr-feedback.md
+            total_issues=$((total_issues + lint_issues))
+          else
+            echo "✅ **No linting issues found**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # 3. Type Issues
+          # ===================
+          echo "### 📝 Type Checking" >> pr-feedback.md
+          if ! mypy markitdown_mcp --json-report mypy_report.json > mypy_output.txt 2>&1; then
+            type_issues=$(jq '.reports | keys | length' mypy_report.json 2>/dev/null || echo "1")
+            echo "❌ **Type checking issues found**" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "<details><summary>Click to see type issues</summary>" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo '```' >> pr-feedback.md
+            cat mypy_output.txt | head -20 >> pr-feedback.md
+            echo '```' >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "**Fix**: Add proper type annotations and resolve type errors" >> pr-feedback.md
+            echo "</details>" >> pr-feedback.md
+            total_issues=$((total_issues + type_issues))
+          else
+            echo "✅ **Type checking passed**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # 4. Security Issues
+          # ===================
+          echo "### 🔒 Security Analysis" >> pr-feedback.md
+          if ! bandit -r markitdown_mcp/ -f json -o bandit_report.json > /dev/null 2>&1; then
+            high_issues=$(jq '[.results[] | select(.issue_severity == "HIGH")] | length' bandit_report.json)
+            med_issues=$(jq '[.results[] | select(.issue_severity == "MEDIUM")] | length' bandit_report.json)
+
+            if [ "$high_issues" -gt 0 ]; then
+              echo "🚨 **$high_issues HIGH severity security issue(s) - MUST FIX**" >> pr-feedback.md
+              security_issues=$high_issues
+            elif [ "$med_issues" -gt 0 ]; then
+              echo "⚠️ **$med_issues MEDIUM severity security issue(s) - Review recommended**" >> pr-feedback.md
+              security_issues=$med_issues
+            fi
+
+            if [ "$security_issues" -gt 0 ]; then
+              echo "" >> pr-feedback.md
+              echo "<details><summary>Click to see security issues</summary>" >> pr-feedback.md
+              echo "" >> pr-feedback.md
+
+              jq -r '
+                .results[] |
+                select(.issue_severity == "HIGH" or .issue_severity == "MEDIUM") |
+                "**" + .filename + ":" + (.line_number | tostring) + "**\n" +
+                "- **Issue**: " + .issue_text + "\n" +
+                "- **Severity**: " + .issue_severity + "\n" +
+                "- **Rule**: " + .test_name + "\n"
+              ' bandit_report.json >> pr-feedback.md
+
+              echo "</details>" >> pr-feedback.md
+              total_issues=$((total_issues + security_issues))
+            fi
+          else
+            echo "✅ **No security issues detected**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # 5. Test Coverage Analysis
+          # ===================
+          echo "### 📊 Test Coverage Analysis" >> pr-feedback.md
+          if pytest tests/unit/ --cov=markitdown_mcp --cov-report=json --cov-report=term > coverage_output.txt 2>&1; then
+            coverage=$(jq -r '.totals.percent_covered' coverage.json)
+            coverage_int=${coverage%.*}
+
+            if [ "$coverage_int" -lt 80 ]; then
+              echo "❌ **Coverage $coverage% is below 80% requirement**" >> pr-feedback.md
+              echo "" >> pr-feedback.md
+              echo "<details><summary>Click to see coverage details</summary>" >> pr-feedback.md
+              echo "" >> pr-feedback.md
+              echo '```' >> pr-feedback.md
+              python -c "
+              import json
+              with open('coverage.json') as f:
+                  data = json.load(f)
+              files = data['files']
+              uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
+              if uncovered:
+                  print('Files below 80% coverage:')
+                  for file, pct in sorted(uncovered, key=lambda x: x[1]):
+                      print(f'{file}: {pct:.1f}%')
+              " >> pr-feedback.md
+              echo '```' >> pr-feedback.md
+              echo "</details>" >> pr-feedback.md
+              total_issues=$((total_issues + 1))
+            else
+              echo "✅ **Coverage $coverage% meets 80% requirement**" >> pr-feedback.md
+            fi
+          else
+            echo "⚠️ **Could not determine test coverage**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # 6. Dead Code Detection
+          # ===================
+          echo "### 🧹 Dead Code Analysis" >> pr-feedback.md
+          if vulture markitdown_mcp/ --json > vulture_output.json 2>/dev/null; then
+            dead_code_count=$(jq length vulture_output.json)
+            if [ "$dead_code_count" -gt 0 ]; then
+              echo "⚠️ **$dead_code_count potential dead code item(s) found**" >> pr-feedback.md
+              echo "" >> pr-feedback.md
+              echo "<details><summary>Click to see potential dead code</summary>" >> pr-feedback.md
+              echo "" >> pr-feedback.md
+              jq -r '.[] | "**" + .filename + ":" + (.first_lineno | tostring) + "** - " + .message' vulture_output.json | head -10 >> pr-feedback.md
+              echo "</details>" >> pr-feedback.md
+            else
+              echo "✅ **No dead code detected**" >> pr-feedback.md
+            fi
+          else
+            echo "✅ **Dead code analysis completed**" >> pr-feedback.md
+          fi
+          echo "" >> pr-feedback.md
+
+          # ===================
+          # Summary & Recommendations
+          # ===================
+          echo "## 📋 Summary" >> pr-feedback.md
+          echo "" >> pr-feedback.md
+
+          if [ "$total_issues" -eq 0 ]; then
+            echo "🎉 **Excellent! No issues detected in this PR.**" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "All checks passed:" >> pr-feedback.md
+            echo "- ✅ Code formatting" >> pr-feedback.md
+            echo "- ✅ Linting rules" >> pr-feedback.md
+            echo "- ✅ Type checking" >> pr-feedback.md
+            echo "- ✅ Security analysis" >> pr-feedback.md
+            echo "- ✅ Test coverage" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "**Ready for review! 🚀**" >> pr-feedback.md
+          else
+            echo "⚠️ **Found $total_issues issue(s) that should be addressed:**" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            [ "$format_issues" -gt 0 ] && echo "- 🎨 Format: $format_issues file(s) need formatting" >> pr-feedback.md
+            [ "$lint_issues" -gt 0 ] && echo "- 🔧 Lint: $lint_issues issue(s)" >> pr-feedback.md
+            [ "$type_issues" -gt 0 ] && echo "- 📝 Types: Issues found" >> pr-feedback.md
+            [ "$security_issues" -gt 0 ] && echo "- 🔒 Security: $security_issues issue(s)" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "### 🔧 Quick Fix Commands:" >> pr-feedback.md
+            echo '```bash' >> pr-feedback.md
+            echo "# Fix formatting and auto-fixable linting issues" >> pr-feedback.md
+            echo "ruff format ." >> pr-feedback.md
+            echo "ruff check . --fix" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "# Run tests with coverage" >> pr-feedback.md
+            echo "pytest tests/unit/ --cov=markitdown_mcp --cov-report=term-missing" >> pr-feedback.md
+            echo "" >> pr-feedback.md
+            echo "# Check security" >> pr-feedback.md
+            echo "bandit -r markitdown_mcp/" >> pr-feedback.md
+            echo '```' >> pr-feedback.md
+          fi
+
+          echo "" >> pr-feedback.md
+          echo "---" >> pr-feedback.md
+          echo "*This analysis was automatically generated by the PR feedback workflow.*" >> pr-feedback.md
+          echo "*Report generated at $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> pr-feedback.md
+
+          # Set outputs for other jobs
+          echo "total_issues=$total_issues" >> $GITHUB_OUTPUT
+          echo "format_issues=$format_issues" >> $GITHUB_OUTPUT
+          echo "lint_issues=$lint_issues" >> $GITHUB_OUTPUT
+          echo "security_issues=$security_issues" >> $GITHUB_OUTPUT
+
+      - name: Post comprehensive PR feedback
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pr-analysis
+          recreate: true
+          path: pr-feedback.md
+
+      - name: Add PR labels based on issues
+        if: steps.issues.outputs.total_issues > 0
+        run: |
+          labels=""
+
+          # Add labels based on issue types
+          [ "${{ steps.issues.outputs.format_issues }}" -gt 0 ] && labels="$labels needs-formatting"
+          [ "${{ steps.issues.outputs.lint_issues }}" -gt 0 ] && labels="$labels needs-linting"
+          [ "${{ steps.issues.outputs.security_issues }}" -gt 0 ] && labels="$labels security-review"
+
+          # Add general labels
+          if [ "${{ steps.issues.outputs.total_issues }}" -gt 10 ]; then
+            labels="$labels needs-major-fixes"
+          elif [ "${{ steps.issues.outputs.total_issues }}" -gt 0 ]; then
+            labels="$labels needs-fixes"
+          fi
+
+          # Apply labels
+          for label in $labels; do
+            gh pr edit ${{ github.event.number }} --add-label "$label" || true
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Request changes if critical issues found
+        if: steps.issues.outputs.security_issues > 0
+        run: |
+          gh pr review ${{ github.event.number }} \
+            --request-changes \
+            --body "🚨 **Critical security issues detected!** Please review and fix the security issues identified in the automated analysis before this PR can be approved."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload detailed reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-analysis-reports
+          path: |
+            pr-feedback.md
+            lint_output.json
+            bandit_report.json
+            mypy_report.json
+            coverage.json
+            vulture_output.json

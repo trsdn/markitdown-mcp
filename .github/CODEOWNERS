@@ -1,0 +1,46 @@
+# CODEOWNERS file for MarkItDown MCP
+#
+# This file defines who must review PRs for specific areas of the codebase.
+# For more information, see: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global ownership - all files require review from maintainers
+* @trsdn
+
+# Core server code - requires extra scrutiny
+/markitdown_mcp/server.py @trsdn
+/markitdown_mcp/__init__.py @trsdn
+
+# Security-sensitive areas
+/markitdown_mcp/security/ @trsdn
+**/security.py @trsdn
+
+# CI/CD workflows - critical infrastructure
+/.github/workflows/ @trsdn
+/.github/actions/ @trsdn
+/scripts/ @trsdn
+
+# Release and versioning
+/pyproject.toml @trsdn
+/CHANGELOG.md @trsdn
+/RELEASE.md @trsdn
+
+# Documentation that affects users
+/README.md @trsdn
+/docs/guides/ @trsdn
+/docs/api/ @trsdn
+
+# Testing infrastructure
+/pytest.ini @trsdn
+/tests/conftest.py @trsdn
+/tests/performance/ @trsdn
+/tests/security/ @trsdn
+
+# Dependency and environment files
+/requirements*.txt @trsdn
+/.gitignore @trsdn
+/.dockerignore @trsdn
+
+# Configuration files
+/.codespellignore @trsdn
+/.markdownlint.yml @trsdn
+/.pre-commit-config.yaml @trsdn
