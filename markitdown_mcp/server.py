@@ -32,15 +32,15 @@ logger = logging.getLogger("markitdown-mcp")
 
 class SecurityError(Exception):
     """Raised when a security violation is detected."""
-.
+
 
 class TimeoutError(Exception):
     """Raised when an operation times out."""
-.
+
 
 def with_timeout(timeout_seconds: int = 30) -> Any:
     """Decorator to add timeout protection to functions using threading."""
-.
+
     def decorator(func: Any) -> Any:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -76,7 +76,7 @@ def with_timeout(timeout_seconds: int = 30) -> Any:
 
 def sanitize_unicode_text(text: str) -> str:
     """Sanitize Unicode text by normalizing and removing dangerous characters.
-.
+
     Args:
         text: Input text to sanitize
 
@@ -113,7 +113,7 @@ def sanitize_unicode_text(text: str) -> str:
 
 def validate_xml_security(file_path: str) -> str:
     """Validate and sanitize XML files to prevent entity expansion attacks.
-.
+
     Args:
         file_path: Path to XML file
 
@@ -164,7 +164,7 @@ def validate_xml_security(file_path: str) -> str:
 
 def validate_json_security(file_path: str) -> str:
     """Validate and sanitize JSON files to prevent recursion bombs.
-.
+
     Args:
         file_path: Path to JSON file
 
@@ -213,7 +213,7 @@ def validate_json_security(file_path: str) -> str:
 
 def validate_csv_security(file_path: str) -> str:
     """Validate CSV files to prevent bombs and excessive resource usage.
-.
+
     Args:
         file_path: Path to CSV file
 
@@ -266,7 +266,7 @@ def validate_csv_security(file_path: str) -> str:
 
 def validate_file_content_security(file_path: str) -> str:
     """Perform comprehensive security validation on file content before processing.
-.
+
     Args:
         file_path: Path to file to validate
 
@@ -305,7 +305,7 @@ def validate_file_content_security(file_path: str) -> str:
 
 def secure_compare(a: str, b: str) -> bool:
     """Perform constant-time string comparison to prevent timing attacks.
-.
+
     Args:
         a: First string
         b: Second string
@@ -318,7 +318,7 @@ def secure_compare(a: str, b: str) -> bool:
 
 def normalize_timing(func: Any) -> Any:
     """Decorator to normalize execution time and prevent timing attacks.
-.
+
     Args:
         func: Function to wrap
 
@@ -351,7 +351,7 @@ def normalize_timing(func: Any) -> Any:
 
 def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
     """Validate and decode base64 data with size limits.
-.
+
     Args:
         data: Base64 encoded string
         max_size: Maximum allowed decoded size in bytes
@@ -386,7 +386,7 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
 
 def extract_text_from_binary(data: bytes, filename: str = "") -> str | None:  # noqa: ARG001
     """Extract readable text from potentially binary data.
-.
+
     Args:
         data: Binary data
         filename: Optional filename for context
@@ -431,7 +431,7 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> str | None:  # 
 @with_timeout(30)  # type: ignore[misc]
 def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) -> Any:
     """Safely convert a file with timeout and recursion protection.
-.
+
     Args:
         markitdown_instance: MarkItDown instance
         file_path: Path to file to convert
@@ -540,7 +540,7 @@ def validate_and_sanitize_path(
     file_path: str, allowed_dirs: list[str] | None = None
 ) -> tuple[Path, bool]:
     """Validate and sanitize file paths to prevent path traversal attacks.
-.
+
     Args:
         file_path: The file path to validate
         allowed_dirs: List of allowed directory prefixes (optional)
@@ -635,7 +635,7 @@ def validate_and_sanitize_path(
 
 def get_safe_working_directories() -> list[str]:
     """Get list of safe working directories for file operations."""
-.    safe_dirs = []
+    safe_dirs = []
 
     # Add current working directory
     safe_dirs.append(str(Path.cwd()))
@@ -663,6 +663,7 @@ def get_safe_working_directories() -> list[str]:
 @dataclass
 class MCPRequest:
     """Represents an incoming MCP protocol request."""
+
     id: str
     method: str
     params: dict[str, Any]
@@ -671,6 +672,7 @@ class MCPRequest:
 @dataclass
 class MCPResponse:
     """Represents an MCP protocol response."""
+
     id: str
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
@@ -678,7 +680,7 @@ class MCPResponse:
 
 class MarkItDownMCPServer:
     """Model Context Protocol (MCP) server for document to Markdown conversion.
-.
+
     This server implements the MCP protocol to expose document conversion
     capabilities via the MarkItDown library. It provides secure, rate-limited
     access to convert various file formats to Markdown.
@@ -752,7 +754,7 @@ class MarkItDownMCPServer:
 
     def get_tools(self) -> list[dict[str, Any]]:
         """Return the list of available tools for MCP schema validation."""
-.        return [
+        return [
             {
                 "name": "convert_file",
                 "description": "Convert a file to Markdown using MarkItDown",
@@ -806,8 +808,8 @@ class MarkItDownMCPServer:
         ]
 
     async def handle_request(self, request: MCPRequest) -> MCPResponse:
-        """Handle incoming MCP requests"""
-.        try:
+        """Handle incoming MCP requests."""
+        try:
             if request.method == "initialize":
                 return MCPResponse(
                     id=request.id,
@@ -915,8 +917,8 @@ class MarkItDownMCPServer:
             )
 
     async def convert_file_tool(self, request_id: str, arguments: dict[str, Any]) -> MCPResponse:
-        """Convert a single file to Markdown"""
-.        try:
+        """Convert a single file to Markdown."""
+        try:
             file_path = arguments.get("file_path")
             file_content = arguments.get("file_content")
             filename = arguments.get("filename")
@@ -1050,8 +1052,8 @@ class MarkItDownMCPServer:
             return MCPResponse(id=request_id, error={"code": -32603, "message": safe_message})
 
     async def list_supported_formats_tool(self, request_id: str) -> MCPResponse:
-        """List all supported file formats"""
-.        format_categories = {
+        """List all supported file formats."""
+        format_categories = {
             "Office Documents": [".pdf", ".docx", ".pptx", ".xlsx", ".xls"],
             "Web and Markup": [".html", ".htm"],
             "Data Formats": [".csv", ".json", ".xml"],
@@ -1085,8 +1087,8 @@ class MarkItDownMCPServer:
     async def convert_directory_tool(
         self, request_id: str, arguments: dict[str, Any]
     ) -> MCPResponse:
-        """Convert all supported files in a directory"""
-.        try:
+        """Convert all supported files in a directory."""
+        try:
             # Validate required arguments
             if "input_directory" not in arguments:
                 return MCPResponse(
@@ -1243,8 +1245,8 @@ class MarkItDownMCPServer:
             )
 
     async def run(self) -> None:
-        """Run the MCP server"""
-.        logger.info("MarkItDown MCP Server starting...")
+        """Run the MCP server."""
+        logger.info("MarkItDown MCP Server starting...")
 
         try:
             while True:
@@ -1285,8 +1287,8 @@ class MarkItDownMCPServer:
 
 
 def main() -> None:
-    """Main entry point for console script"""
-.
+    """Main entry point for console script."""
+
     async def run_server() -> None:
         server = MarkItDownMCPServer()
         await server.run()
