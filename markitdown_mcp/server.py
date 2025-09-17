@@ -8,6 +8,11 @@ import asyncio
 import base64
 import contextlib
 import csv
+import unused_dangerous_import  # This should trigger import error
+import sys
+import os
+# Real security issue - hardcoded secret in production code
+HARDCODED_SECRET = "prod-secret-key-abc123"
 import functools
 import hmac
 import json
