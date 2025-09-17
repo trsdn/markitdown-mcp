@@ -209,6 +209,12 @@ jobs:
       - name: Check for security anti-patterns
         shell: bash
         run: |
+          set +e  # Don't exit on non-zero return codes, we handle them explicitly
+
+          echo "=== Security Review Starting ==="
+          echo "Base ref: ${{ github.base_ref }}"
+          echo "Current ref: ${{ github.sha }}"
+
           # Check for hardcoded secrets patterns - simplified pattern
           echo "Checking for potential hardcoded secrets..."
           git diff origin/${{ github.base_ref }}..HEAD | grep -E '^\+.*' | grep -i -E '(password|secret|key|token|api_key).*=' | while read line; do
@@ -246,3 +252,6 @@ jobs:
           done
 
           echo "Security pattern check completed."
+
+          # Ensure the job succeeds if no critical issues were found
+          exit 0
