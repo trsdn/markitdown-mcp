@@ -1050,7 +1050,10 @@ class MarkItDownMCPServer:
             ):
                 safe_message = "Invalid file path"
             elif "missingdependencyexception" in error_str or "dependency" in error_str:
-                safe_message = "Missing dependency - install markitdown with appropriate extras (e.g., markitdown[pdf])"
+                safe_message = (
+                    "Missing dependency - install markitdown with appropriate "
+                    "extras (e.g., markitdown[pdf])"
+                )
             else:
                 safe_message = "Conversion failed"
 
