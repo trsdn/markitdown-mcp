@@ -9,7 +9,6 @@ on:
       - 'requirements*.txt'
       - '.github/workflows/fast-tests.yml'
   push:
-    branches: [main]
     branches-ignore: [ci-cd-maintenance]
   workflow_dispatch:
 

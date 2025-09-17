@@ -2,11 +2,9 @@ name: Dependency Review
 
 on:
   pull_request:
-    branches: [ main ]
     branches-ignore: [ci-cd-maintenance]
   # Also run on Dependabot PRs
   pull_request_target:
-    branches: [ main ]
     branches-ignore: [ci-cd-maintenance]
 
 permissions:

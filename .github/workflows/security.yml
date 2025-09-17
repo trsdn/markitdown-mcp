@@ -2,10 +2,8 @@ name: Security
 
 on:
   push:
-    branches: [ main ]
     branches-ignore: [ci-cd-maintenance]
   pull_request:
-    branches: [ main ]
     branches-ignore: [ci-cd-maintenance]
   schedule:
     # Run security scans daily at 3 AM UTC
