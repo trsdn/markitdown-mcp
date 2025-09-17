@@ -272,7 +272,7 @@ Contributors will be notified of releases through:
 - **Changelog**: Updated CHANGELOG.md file
 - **Issues**: Automatic closure of fixed issues
 
-For detailed release procedures, see [RELEASE.md](../../RELEASE.md).
+For detailed release procedures, see the RELEASE.md file in the repository root.
 
 ## 🐛 Reporting Issues
 
