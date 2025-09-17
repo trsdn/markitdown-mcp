@@ -6,6 +6,7 @@ Converts various file formats to Markdown using Microsoft's MarkItDown library.
 
 import asyncio
 import base64
+import contextlib
 import csv
 import functools
 import hmac
@@ -20,7 +21,7 @@ import time
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from markitdown import MarkItDown
 
@@ -45,8 +46,8 @@ def with_timeout(timeout_seconds: int = 30) -> Any:
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             import threading
 
-            result: List[Any] = [None]
-            exception: List[Optional[Exception]] = [None]
+            result: list[Any] = [None]
+            exception: list[Exception | None] = [None]
 
             def target() -> None:
                 try:
@@ -125,7 +126,7 @@ def validate_xml_security(file_path: str) -> str:
         SecurityError: If XML contains dangerous constructs
     """
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         # Check for dangerous XML patterns
@@ -160,7 +161,7 @@ def validate_xml_security(file_path: str) -> str:
     except Exception as e:
         if isinstance(e, SecurityError):
             raise
-        raise SecurityError("Security violation: XML validation failed")
+        raise SecurityError("Security violation: XML validation failed") from e
 
 
 def validate_json_security(file_path: str) -> str:
@@ -177,7 +178,7 @@ def validate_json_security(file_path: str) -> str:
         SecurityError: If JSON is too deeply nested or complex
     """
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         # Check file size first
@@ -228,12 +229,12 @@ def validate_csv_security(file_path: str) -> str:
     """
     try:
         # Check file size first
-        file_size = os.path.getsize(file_path)
+        file_size = Path(file_path).stat().st_size
         if file_size > 50 * 1024 * 1024:  # 50MB limit
             raise SecurityError("Security violation: CSV file too large")
 
         # Analyze CSV structure
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with Path(file_path).open(encoding="utf-8", errors="ignore") as f:
             # Read first few lines to check structure
             sample = f.read(1024 * 1024)  # 1MB sample
 
@@ -242,11 +243,9 @@ def validate_csv_security(file_path: str) -> str:
             dialect = csv.Sniffer().sniff(sample[:1024])
             reader = csv.reader(sample.splitlines(), dialect=dialect)
 
-            row_count = 0
             max_cols = 0
 
-            for row in reader:
-                row_count += 1
+            for row_count, row in enumerate(reader, 1):
                 max_cols = max(max_cols, len(row))
 
                 # Limits to prevent CSV bombs
@@ -288,15 +287,15 @@ def validate_file_content_security(file_path: str) -> str:
         file_ext = Path(file_path).suffix.lower()
 
         # Apply format-specific validation
-        if mime_type and "xml" in mime_type or file_ext in [".xml", ".xhtml"]:
+        if (mime_type and "xml" in mime_type) or file_ext in [".xml", ".xhtml"]:
             return validate_xml_security(file_path)
-        elif mime_type and "json" in mime_type or file_ext == ".json":
+        if (mime_type and "json" in mime_type) or file_ext == ".json":
             return validate_json_security(file_path)
-        elif mime_type and "csv" in mime_type or file_ext == ".csv":
+        if (mime_type and "csv" in mime_type) or file_ext == ".csv":
             return validate_csv_security(file_path)
 
         # General file size check
-        file_size = os.path.getsize(file_path)
+        file_size = Path(file_path).stat().st_size
         if file_size > 100 * 1024 * 1024:  # 100MB general limit
             raise SecurityError("Security violation: file too large")
 
@@ -352,8 +351,7 @@ def normalize_timing(func: Any) -> Any:
 
         if success:
             return result
-        else:
-            raise result
+        raise result
 
     return wrapper
 
@@ -391,10 +389,10 @@ def validate_base64(data: str, max_size: int = 10 * 1024 * 1024) -> bytes:
         return decoded
 
     except Exception:
-        raise SecurityError("Security violation: invalid base64 data")
+        raise SecurityError("Security violation: invalid base64 data") from None
 
 
-def extract_text_from_binary(data: bytes, filename: str = "") -> Optional[str]:
+def extract_text_from_binary(data: bytes, filename: str = "") -> str | None:  # noqa: ARG001
     """
     Extract readable text from potentially binary data.
 
@@ -473,7 +471,7 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
         # Check if file might contain binary data in text format
         file_path_obj = Path(validated_file_path)
         if file_path_obj.exists():
-            with open(validated_file_path, "rb") as f:
+            with Path(validated_file_path).open("rb") as f:
                 data = f.read(1024)  # Read first 1KB to check
 
             # If it's a text file but contains significant binary content
@@ -527,21 +525,21 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
 
         return result
 
-    except RecursionError:
-        raise SecurityError("Security violation: recursion depth limit exceeded during processing")
+    except RecursionError as e:
+        raise SecurityError(
+            "Security violation: recursion depth limit exceeded during processing"
+        ) from e
     except Exception as e:
         if "recursion" in str(e).lower():
             raise SecurityError(
                 "Security violation: recursion depth limit exceeded during processing"
-            )
+            ) from e
         raise
     finally:
         # Clean up temporary sanitized file if created
         if sanitized_file_path and sanitized_file_path != file_path:
-            try:
+            with contextlib.suppress(OSError, PermissionError):
                 Path(sanitized_file_path).unlink(missing_ok=True)
-            except (OSError, PermissionError):
-                pass  # Ignore file cleanup errors
 
         # Restore original recursion limit
         sys.setrecursionlimit(original_limit)
@@ -549,8 +547,8 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
 
 @normalize_timing
 def validate_and_sanitize_path(
-    file_path: str, allowed_dirs: Optional[List[str]] = None
-) -> Tuple[Path, bool]:
+    file_path: str, allowed_dirs: list[str] | None = None
+) -> tuple[Path, bool]:
     """
     Validate and sanitize file paths to prevent path traversal attacks.
 
@@ -642,11 +640,11 @@ def validate_and_sanitize_path(
 
         return path, True
 
-    except (OSError, ValueError):
-        raise SecurityError("Security violation: invalid path")
+    except (OSError, ValueError) as e:
+        raise SecurityError("Security violation: invalid path") from e
 
 
-def get_safe_working_directories() -> List[str]:
+def get_safe_working_directories() -> list[str]:
     """Get list of safe working directories for file operations."""
     safe_dirs = []
 
@@ -677,14 +675,14 @@ def get_safe_working_directories() -> List[str]:
 class MCPRequest:
     id: str
     method: str
-    params: Dict[str, Any]
+    params: dict[str, Any]
 
 
 @dataclass
 class MCPResponse:
     id: str
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None
 
 
 class MarkItDownMCPServer:
@@ -775,7 +773,7 @@ class MarkItDownMCPServer:
                     },
                 )
 
-            elif request.method == "tools/list":
+            if request.method == "tools/list":
                 return MCPResponse(
                     id=request.id,
                     result={
@@ -838,7 +836,7 @@ class MarkItDownMCPServer:
                     },
                 )
 
-            elif request.method == "tools/call":
+            if request.method == "tools/call":
                 tool_name = request.params.get("name")
                 arguments = request.params.get("arguments", {})
 
@@ -851,29 +849,27 @@ class MarkItDownMCPServer:
 
                 if tool_name == "convert_file":
                     return await self.convert_file_tool(request.id, arguments)
-                elif tool_name == "list_supported_formats":
+                if tool_name == "list_supported_formats":
                     return await self.list_supported_formats_tool(request.id)
-                elif tool_name == "convert_directory":
+                if tool_name == "convert_directory":
                     return await self.convert_directory_tool(request.id, arguments)
-                else:
-                    return MCPResponse(
-                        id=request.id,
-                        error={"code": -32601, "message": f"Unknown tool: {tool_name}"},
-                    )
-
-            else:
                 return MCPResponse(
                     id=request.id,
-                    error={"code": -32601, "message": f"Unknown method: {request.method}"},
+                    error={"code": -32601, "message": f"Unknown tool: {tool_name}"},
                 )
+
+            return MCPResponse(
+                id=request.id,
+                error={"code": -32601, "message": f"Unknown method: {request.method}"},
+            )
 
         except Exception as e:
             logger.error(f"Error handling request: {e}")
             return MCPResponse(
-                id=request.id, error={"code": -32603, "message": f"Internal error: {str(e)}"}
+                id=request.id, error={"code": -32603, "message": f"Internal error: {e!s}"}
             )
 
-    async def convert_file_tool(self, request_id: str, arguments: Dict[str, Any]) -> MCPResponse:
+    async def convert_file_tool(self, request_id: str, arguments: dict[str, Any]) -> MCPResponse:
         """Convert a single file to Markdown"""
         try:
             file_path = arguments.get("file_path")
@@ -892,7 +888,7 @@ class MarkItDownMCPServer:
                 # Convert from file path with security validation
                 try:
                     # Validate and sanitize the file path
-                    validated_path, is_safe = validate_and_sanitize_path(
+                    validated_path, _is_safe = validate_and_sanitize_path(
                         file_path, self.safe_directories
                     )
                     logger.info(f"Validated file path: {file_path} -> {validated_path}")
@@ -933,7 +929,7 @@ class MarkItDownMCPServer:
                     },
                 )
 
-            elif file_content is not None and filename:
+            if file_content is not None and filename:
                 # Convert from base64 encoded content
                 try:
                     # Validate and decode base64 content
@@ -971,7 +967,7 @@ class MarkItDownMCPServer:
                         id=request_id,
                         error={
                             "code": -32603,
-                            "message": f"Error processing file content: {str(e)}",
+                            "message": f"Error processing file content: {e!s}",
                         },
                     )
             else:
@@ -987,13 +983,13 @@ class MarkItDownMCPServer:
             logger.error(f"Error in convert_file_tool: {e}")
             # Sanitize error message to prevent information disclosure
             error_str = str(e).lower()
-            if "permission denied" in error_str or "access denied" in error_str:
+            if (
+                "permission denied" in error_str
+                or "access denied" in error_str
+                or "no such file or directory" in error_str
+            ):
                 safe_message = "File not found"
-            elif "no such file or directory" in error_str:
-                safe_message = "File not found"
-            elif "file name too long" in error_str:
-                safe_message = "Invalid file path"
-            elif any(
+            elif "file name too long" in error_str or any(
                 word in error_str
                 for word in ["security violation", "invalid path", "path traversal"]
             ):
@@ -1037,7 +1033,7 @@ class MarkItDownMCPServer:
         )
 
     async def convert_directory_tool(
-        self, request_id: str, arguments: Dict[str, Any]
+        self, request_id: str, arguments: dict[str, Any]
     ) -> MCPResponse:
         """Convert all supported files in a directory"""
         try:
@@ -1061,7 +1057,7 @@ class MarkItDownMCPServer:
 
             # Security validation for input directory
             try:
-                validated_input_dir, is_safe = validate_and_sanitize_path(
+                validated_input_dir, _is_safe = validate_and_sanitize_path(
                     arguments["input_directory"], self.safe_directories
                 )
                 logger.info(
@@ -1078,7 +1074,7 @@ class MarkItDownMCPServer:
             # Security validation for output directory if specified
             if "output_directory" in arguments:
                 try:
-                    validated_output_dir, is_safe = validate_and_sanitize_path(
+                    validated_output_dir, _is_safe = validate_and_sanitize_path(
                         arguments["output_directory"], self.safe_directories
                     )
                     logger.info(
@@ -1091,7 +1087,7 @@ class MarkItDownMCPServer:
                         id=request_id,
                         error={
                             "code": -32602,
-                            "message": f"Output directory error: {str(e)}",
+                            "message": f"Output directory error: {e!s}",
                         },
                     )
             else:
@@ -1138,9 +1134,11 @@ class MarkItDownMCPServer:
                         markdown_content = result.text_content
 
                         # Write file asynchronously
-                        def write_file() -> None:
-                            with open(output_path, "w", encoding="utf-8") as f:
-                                f.write(markdown_content)
+                        def write_file(
+                            path: str = output_path, content: str = markdown_content
+                        ) -> None:
+                            with Path(path).open("w", encoding="utf-8") as f:
+                                f.write(content)
 
                         await asyncio.get_event_loop().run_in_executor(None, write_file)
                         success_count += 1
@@ -1175,13 +1173,13 @@ class MarkItDownMCPServer:
             logger.error(f"Error in convert_directory_tool: {e}")
             # Sanitize error message to prevent information disclosure
             error_str = str(e).lower()
-            if "permission denied" in error_str or "access denied" in error_str:
+            if (
+                "permission denied" in error_str
+                or "access denied" in error_str
+                or "no such file or directory" in error_str
+            ):
                 safe_message = "Directory not found"
-            elif "no such file or directory" in error_str:
-                safe_message = "Directory not found"
-            elif "not a directory" in error_str:
-                safe_message = "Invalid directory path"
-            elif any(
+            elif "not a directory" in error_str or any(
                 word in error_str
                 for word in ["security violation", "invalid path", "path traversal"]
             ):
@@ -1217,7 +1215,7 @@ class MarkItDownMCPServer:
                     response = await self.handle_request(request)
 
                     # Send response
-                    response_dict: Dict[str, Any] = {"jsonrpc": "2.0", "id": response.id}
+                    response_dict: dict[str, Any] = {"jsonrpc": "2.0", "id": response.id}
                     if response.result is not None:
                         response_dict["result"] = response.result
                     if response.error is not None:

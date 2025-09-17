@@ -8,7 +8,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -195,7 +195,7 @@ def mcp_tools_list_request():
 
 
 def create_mcp_tool_request(
-    tool_name: str, arguments: Dict[str, Any], request_id: str = "tool-test"
+    tool_name: str, arguments: dict[str, Any], request_id: str = "tool-test"
 ) -> MCPRequest:
     """Helper to create MCP tool call requests."""
     return MCPRequest(
@@ -225,13 +225,13 @@ class MCPTestClient:
         self.server = server
         self.request_id_counter = 1
 
-    async def send_request(self, method: str, params: Dict[str, Any] = None) -> MCPResponse:
+    async def send_request(self, method: str, params: dict[str, Any] | None = None) -> MCPResponse:
         """Send a request to the server and return the response."""
         request = MCPRequest(id=str(self.request_id_counter), method=method, params=params or {})
         self.request_id_counter += 1
         return await self.server.handle_request(request)
 
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> MCPResponse:
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> MCPResponse:
         """Call a specific tool and return the response."""
         return await self.send_request("tools/call", {"name": tool_name, "arguments": arguments})
 

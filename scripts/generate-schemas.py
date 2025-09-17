@@ -14,16 +14,17 @@ import asyncio
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 # Add the project root to sys.path so we can import the server
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+# Import after path setup
+from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest  # noqa: E402
 
 
-async def generate_tool_schemas() -> Dict[str, Any]:
+async def generate_tool_schemas() -> dict[str, Any]:
     """Generate schemas for all MCP tools."""
     server = MarkItDownMCPServer()
 
@@ -50,7 +51,7 @@ async def generate_tool_schemas() -> Dict[str, Any]:
         "stats": {
             "total_tools": len(tools),
             "tool_names": [tool["name"] for tool in tools],
-        }
+        },
     }
 
     # Extract individual tool schemas
@@ -61,15 +62,16 @@ async def generate_tool_schemas() -> Dict[str, Any]:
             "input_schema": tool["inputSchema"],
             "required_args": tool["inputSchema"].get("required", []),
             "optional_args": [
-                prop for prop in tool["inputSchema"].get("properties", {}).keys()
+                prop
+                for prop in tool["inputSchema"].get("properties", {})
                 if prop not in tool["inputSchema"].get("required", [])
-            ]
+            ],
         }
 
     return schema_doc
 
 
-def validate_schemas(schemas: Dict[str, Any]) -> bool:
+def validate_schemas(schemas: dict[str, Any]) -> bool:
     """Validate generated schemas are correct."""
     try:
         from jsonschema import Draft7Validator
@@ -105,14 +107,14 @@ def validate_schemas(schemas: Dict[str, Any]) -> bool:
         return True
 
 
-def compare_with_previous(new_schemas: Dict[str, Any], schemas_file: Path) -> None:
+def compare_with_previous(new_schemas: dict[str, Any], schemas_file: Path) -> None:
     """Compare with previous schemas to detect breaking changes."""
     if not schemas_file.exists():
         print("📝 No previous schemas found, this is the first generation")
         return
 
     try:
-        with open(schemas_file) as f:
+        with schemas_file.open() as f:
             old_schemas = json.load(f)
 
         breaking_changes = []
@@ -188,7 +190,7 @@ async def main():
     compare_with_previous(schemas, schemas_file)
 
     # Write schemas to file
-    with open(schemas_file, "w") as f:
+    with schemas_file.open("w") as f:
         json.dump(schemas, f, indent=2, sort_keys=True)
 
     print(f"📄 Schemas written to {schemas_file}")
@@ -199,7 +201,7 @@ async def main():
 
     for tool_name, tool_schema in schemas["tool_schemas"].items():
         tool_file = tools_dir / f"{tool_name}.json"
-        with open(tool_file, "w") as f:
+        with tool_file.open("w") as f:
             json.dump(tool_schema, f, indent=2)
 
     print(f"📁 Individual tool schemas written to {tools_dir}")

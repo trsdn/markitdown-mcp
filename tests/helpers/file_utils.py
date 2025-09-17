@@ -7,10 +7,9 @@ import shutil
 import string
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Union
 
 
-def create_test_file(content: str, filename: str, temp_dir: Optional[str] = None) -> str:
+def create_test_file(content: str, filename: str, temp_dir: str | None = None) -> str:
     """Create a test file with specified content."""
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
@@ -21,7 +20,7 @@ def create_test_file(content: str, filename: str, temp_dir: Optional[str] = None
     return str(file_path)
 
 
-def create_binary_test_file(content: bytes, filename: str, temp_dir: Optional[str] = None) -> str:
+def create_binary_test_file(content: bytes, filename: str, temp_dir: str | None = None) -> str:
     """Create a binary test file with specified content."""
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
@@ -32,7 +31,7 @@ def create_binary_test_file(content: bytes, filename: str, temp_dir: Optional[st
     return str(file_path)
 
 
-def create_minimal_pdf(temp_dir: Optional[str] = None) -> str:
+def create_minimal_pdf(temp_dir: str | None = None) -> str:
     """Create a minimal valid PDF file for testing."""
     pdf_content = b"""%PDF-1.4
 1 0 obj
@@ -90,7 +89,7 @@ startxref
     return create_binary_test_file(pdf_content, "test.pdf", temp_dir)
 
 
-def create_minimal_docx(temp_dir: Optional[str] = None) -> str:
+def create_minimal_docx(temp_dir: str | None = None) -> str:
     """Create a minimal DOCX file (ZIP format)."""
     import zipfile
 
@@ -126,7 +125,7 @@ def create_minimal_docx(temp_dir: Optional[str] = None) -> str:
     return str(file_path)
 
 
-def create_minimal_xlsx(temp_dir: Optional[str] = None) -> str:
+def create_minimal_xlsx(temp_dir: str | None = None) -> str:
     """Create a minimal XLSX file."""
     import zipfile
 
@@ -171,7 +170,7 @@ def create_minimal_xlsx(temp_dir: Optional[str] = None) -> str:
     return str(file_path)
 
 
-def create_test_image(width: int = 100, height: int = 100, temp_dir: Optional[str] = None) -> str:
+def create_test_image(width: int = 100, height: int = 100, temp_dir: str | None = None) -> str:
     """Create a test image file with basic content."""
     try:
         from PIL import Image, ImageDraw
@@ -196,7 +195,7 @@ def create_test_image(width: int = 100, height: int = 100, temp_dir: Optional[st
     return str(file_path)
 
 
-def create_minimal_png(temp_dir: Optional[str] = None) -> str:
+def create_minimal_png(temp_dir: str | None = None) -> str:
     """Create a minimal valid PNG file."""
     # Minimal 1x1 white PNG
     png_content = bytes(
@@ -278,7 +277,7 @@ def create_minimal_png(temp_dir: Optional[str] = None) -> str:
     return create_binary_test_file(png_content, "minimal.png", temp_dir)
 
 
-def create_corrupted_file(filename: str, temp_dir: Optional[str] = None) -> str:
+def create_corrupted_file(filename: str, temp_dir: str | None = None) -> str:
     """Create a file with corrupted/invalid content."""
     if temp_dir is None:
         temp_dir = tempfile.mkdtemp()
@@ -309,7 +308,7 @@ def create_corrupted_file(filename: str, temp_dir: Optional[str] = None) -> str:
 
 
 def create_large_file(
-    size_mb: int, filename: str = "large.txt", temp_dir: Optional[str] = None
+    size_mb: int, filename: str = "large.txt", temp_dir: str | None = None
 ) -> str:
     """Create a large file for performance testing."""
     if temp_dir is None:
@@ -321,7 +320,7 @@ def create_large_file(
     line = "This is a line for large file testing. " * 10 + "\n"
     lines_needed = (size_mb * 1024 * 1024) // len(line.encode())
 
-    with open(file_path, "w", encoding="utf-8") as f:
+    with Path(file_path).open("w", encoding="utf-8") as f:
         for i in range(lines_needed):
             f.write(f"Line {i}: {line}")
 
@@ -329,8 +328,8 @@ def create_large_file(
 
 
 def create_test_directory_structure(
-    base_dir: Optional[str] = None,
-) -> Dict[str, Union[str, List[str]]]:
+    base_dir: str | None = None,
+) -> dict[str, str | list[str]]:
     """Create a complex directory structure for testing."""
     if base_dir is None:
         base_dir = tempfile.mkdtemp()
@@ -389,7 +388,7 @@ def create_test_directory_structure(
 
         image_path = create_test_image(temp_dir=str(base_path / "images"))
         files_created.append(image_path)
-    except Exception:
+    except Exception:  # noqa: S110
         # Skip binary files if dependencies not available
         pass
 
@@ -404,7 +403,7 @@ def create_test_directory_structure(
 def generate_random_text(length: int) -> str:
     """Generate random text of specified length."""
     chars = string.ascii_letters + string.digits + " \n.,!?"
-    return "".join(random.choices(chars, k=length))
+    return "".join(random.choices(chars, k=length))  # noqa: S311
 
 
 def file_exists_and_readable(file_path: str) -> bool:
@@ -416,7 +415,7 @@ def file_exists_and_readable(file_path: str) -> bool:
         return False
 
 
-def get_file_info(file_path: str) -> Dict[str, Union[str, int]]:
+def get_file_info(file_path: str) -> dict[str, str | int]:
     """Get basic file information."""
     path = Path(file_path)
 
@@ -446,6 +445,6 @@ def cleanup_temp_files(*file_paths: str) -> None:
                 path.unlink()
             elif path.is_dir():
                 shutil.rmtree(path)
-        except Exception:
+        except Exception:  # noqa: S110
             # Ignore cleanup errors
             pass

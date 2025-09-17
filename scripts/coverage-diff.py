@@ -8,19 +8,18 @@ Compares current coverage with base branch to detect coverage regressions.
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Tuple
 
 
-def load_coverage(coverage_file: Path) -> Optional[Dict]:
+def load_coverage(coverage_file: Path) -> dict | None:
     """Load coverage data from JSON file."""
     try:
-        with open(coverage_file) as f:
+        with coverage_file.open() as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
 
-def get_coverage_summary(coverage_data: Dict) -> Tuple[float, Dict[str, float]]:
+def get_coverage_summary(coverage_data: dict) -> tuple[float, dict[str, float]]:
     """Extract coverage summary from coverage data."""
     total_coverage = coverage_data["totals"]["percent_covered"]
 
@@ -32,10 +31,7 @@ def get_coverage_summary(coverage_data: Dict) -> Tuple[float, Dict[str, float]]:
     return total_coverage, file_coverage
 
 
-def compare_coverage(
-    current_file: Path,
-    base_file: Optional[Path] = None
-) -> Dict[str, any]:
+def compare_coverage(current_file: Path, base_file: Path | None = None) -> dict[str, any]:
     """Compare current coverage with base coverage."""
     current_data = load_coverage(current_file)
     if not current_data:
@@ -49,7 +45,7 @@ def compare_coverage(
         "diff": 0,
         "status": "new",
         "file_changes": [],
-        "summary": f"Coverage: {current_total:.1f}%"
+        "summary": f"Coverage: {current_total:.1f}%",
     }
 
     if base_file and base_file.exists():
@@ -59,7 +55,9 @@ def compare_coverage(
 
             result["base_coverage"] = base_total
             result["diff"] = current_total - base_total
-            result["status"] = "improved" if result["diff"] > 0 else "decreased" if result["diff"] < 0 else "same"
+            result["status"] = (
+                "improved" if result["diff"] > 0 else "decreased" if result["diff"] < 0 else "same"
+            )
 
             # Check file-level changes
             for filename in set(current_files.keys()) | set(base_files.keys()):
@@ -68,12 +66,9 @@ def compare_coverage(
                 diff = current_cov - base_cov
 
                 if abs(diff) > 1:  # Only report significant changes
-                    result["file_changes"].append({
-                        "file": filename,
-                        "current": current_cov,
-                        "base": base_cov,
-                        "diff": diff
-                    })
+                    result["file_changes"].append(
+                        {"file": filename, "current": current_cov, "base": base_cov, "diff": diff}
+                    )
 
             # Update summary
             if result["diff"] > 0:
@@ -86,7 +81,7 @@ def compare_coverage(
     return result
 
 
-def generate_coverage_comment(comparison: Dict) -> str:
+def generate_coverage_comment(comparison: dict) -> str:
     """Generate markdown comment for coverage comparison."""
     lines = []
 
@@ -95,14 +90,9 @@ def generate_coverage_comment(comparison: Dict) -> str:
     lines.append("")
 
     # Summary
-    status_emoji = {
-        "improved": "✅",
-        "decreased": "⚠️",
-        "same": "➡️",
-        "new": "🆕"
-    }
+    status_emoji = {"improved": "✅", "decreased": "⚠️", "same": "➡️", "new": "🆕"}
 
-    emoji = status_emoji.get(comparison["status"], "ℹ️")
+    emoji = status_emoji.get(comparison["status"], "📊")
     lines.append(f"{emoji} **{comparison['summary']}**")
     lines.append("")
 
@@ -110,7 +100,9 @@ def generate_coverage_comment(comparison: Dict) -> str:
         # Detailed comparison
         lines.append("| Metric | Current | Base | Change |")
         lines.append("|--------|---------|------|--------|")
-        lines.append(f"| Total Coverage | {comparison['current_coverage']:.1f}% | {comparison['base_coverage']:.1f}% | {comparison['diff']:+.1f}% |")
+        lines.append(
+            f"| Total Coverage | {comparison['current_coverage']:.1f}% | {comparison['base_coverage']:.1f}% | {comparison['diff']:+.1f}% |"
+        )
         lines.append("")
 
         # File-level changes
@@ -121,7 +113,9 @@ def generate_coverage_comment(comparison: Dict) -> str:
             lines.append("|------|---------|------|--------|")
 
             for change in comparison["file_changes"][:10]:  # Limit to 10 files
-                lines.append(f"| {change['file']} | {change['current']:.1f}% | {change['base']:.1f}% | {change['diff']:+.1f}% |")
+                lines.append(
+                    f"| {change['file']} | {change['current']:.1f}% | {change['base']:.1f}% | {change['diff']:+.1f}% |"
+                )
 
             if len(comparison["file_changes"]) > 10:
                 lines.append(f"*... and {len(comparison['file_changes']) - 10} more files*")
@@ -153,16 +147,16 @@ def main():
     # Print summary for CI logs
     print(comparison["summary"])
 
-    if comparison["diff"] < -5:  # Significant decrease
-        print(f"⚠️ Coverage decreased by {abs(comparison['diff']):.1f}%")
-        sys.exit(1)
-
-    # Output markdown for PR comments
+    # Always output markdown for PR comments before exiting
     comment = generate_coverage_comment(comparison)
-    with open("coverage-comment.md", "w") as f:
+    with Path("coverage-comment.md").open("w") as f:
         f.write(comment)
 
     print("📝 Coverage comment written to coverage-comment.md")
+
+    if comparison["diff"] < -5:  # Significant decrease
+        print(f"⚠️ Coverage decreased by {abs(comparison['diff']):.1f}%")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
