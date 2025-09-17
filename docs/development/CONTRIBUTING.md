@@ -135,6 +135,145 @@ When creating a PR, please include:
 3. Address any feedback
 4. Once approved, PR will be merged
 
+## 🚀 Release Process
+
+### Conventional Commits
+
+**All commits MUST follow conventional commit format** for automated version management:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+#### Commit Types
+
+| Type | Description | Version Impact |
+|------|-------------|----------------|
+| `feat` | New feature | Minor (0.1.0) |
+| `fix` | Bug fix | Patch (0.0.1) |
+| `docs` | Documentation only | None |
+| `style` | Code formatting | None |
+| `refactor` | Code restructuring | None |
+| `perf` | Performance improvement | Patch (0.0.1) |
+| `test` | Testing changes | None |
+| `chore` | Build/dependencies | None |
+| `ci` | CI/CD changes | None |
+| `BREAKING CHANGE` | Breaking API change | Major (1.0.0) |
+
+#### Examples
+
+```bash
+# New feature (minor version bump)
+feat(mcp): add support for PowerBI files
+
+# Bug fix (patch version bump)
+fix(security): resolve path traversal vulnerability
+
+# Breaking change (major version bump)
+feat(api): redesign tool interface
+
+BREAKING CHANGE: tool parameters now require explicit types
+```
+
+### Automated Releases
+
+Releases are **fully automated** based on conventional commits:
+
+1. **Version Detection**: Commits since last release determine version bump
+2. **Quality Gates**: All CI checks must pass before release
+3. **Changelog**: Automatically generated from commit messages
+4. **Publishing**: Package published to PyPI automatically
+5. **GitHub Release**: Created with auto-generated release notes
+
+### Contributing to Releases
+
+#### For Feature Development
+
+```bash
+# 1. Create feature branch
+git checkout -b feat/new-file-format
+
+# 2. Make changes with proper commits
+git commit -m "feat(converter): add support for Pages files"
+git commit -m "test(converter): add Pages file test cases"
+git commit -m "docs(readme): update supported formats list"
+
+# 3. Create PR with conventional title
+# PR Title: "feat(converter): add support for Pages files"
+```
+
+#### For Bug Fixes
+
+```bash
+# 1. Create fix branch
+git checkout -b fix/memory-leak
+
+# 2. Make fix with proper commit
+git commit -m "fix(memory): resolve memory leak in large file processing"
+
+# 3. Create PR
+# PR Title: "fix(memory): resolve memory leak in large file processing"
+```
+
+#### For Breaking Changes
+
+**Breaking changes require special attention:**
+
+```bash
+# Commit message must include BREAKING CHANGE footer
+git commit -m "feat(api): redesign tool response format
+
+BREAKING CHANGE: tool responses now return structured data with metadata instead of plain text"
+```
+
+### Release Timeline
+
+- **Patch Releases**: Automated when bug fixes are merged
+- **Minor Releases**: Automated when new features are merged
+- **Major Releases**: Automated when breaking changes are merged
+- **Security Releases**: Emergency releases within 24 hours
+
+### Release Quality Requirements
+
+Before any release, automated systems verify:
+
+- [ ] All tests pass on supported Python versions (3.10, 3.11, 3.12)
+- [ ] Code formatting and linting pass (ruff)
+- [ ] Type checking passes (mypy)
+- [ ] Test coverage maintains minimum threshold (80%)
+- [ ] Security scans pass (no high/critical vulnerabilities)
+- [ ] MCP protocol compliance verified
+- [ ] Documentation builds successfully
+
+### Manual Release Override
+
+For emergency situations, maintainers can create manual releases:
+
+```bash
+# 1. Ensure quality gates pass
+ruff format --check && ruff check && mypy markitdown_mcp/
+
+# 2. Update version in pyproject.toml
+# 3. Update CHANGELOG.md
+# 4. Create and push tag
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+### Release Communication
+
+Contributors will be notified of releases through:
+- **GitHub Releases**: Automated release notes
+- **PyPI**: Package updates
+- **Changelog**: Updated CHANGELOG.md file
+- **Issues**: Automatic closure of fixed issues
+
+For detailed release procedures, see [RELEASE.md](../../RELEASE.md).
+
 ## 🐛 Reporting Issues
 
 ### Bug Reports

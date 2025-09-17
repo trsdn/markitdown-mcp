@@ -1,0 +1,523 @@
+name: Pre-Release Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of pre-release'
+        required: true
+        default: 'rc'
+        type: choice
+        options:
+          - rc
+          - alpha
+          - beta
+      base_version:
+        description: 'Base version (leave empty for auto-detection)'
+        required: false
+        type: string
+      skip_quality_gates:
+        description: 'Skip quality gates (emergency only)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+# Ensure only one pre-release runs at a time
+concurrency:
+  group: pre-release
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Pre-Release Preparation
+  # ==========================================
+  prepare-prerelease:
+    name: Prepare Pre-Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      is-first-prerelease: ${{ steps.version.outputs.is-first-prerelease }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate pre-release version
+        id: version
+        run: |
+          RELEASE_TYPE="${{ inputs.release_type }}"
+          BASE_VERSION="${{ inputs.base_version }}"
+
+          # Get current version from pyproject.toml
+          CURRENT_VERSION=$(python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          print(data['project']['version'])
+          ")
+
+          # Use provided base version or current version
+          if [ -n "$BASE_VERSION" ]; then
+            VERSION_BASE="$BASE_VERSION"
+          else
+            VERSION_BASE="$CURRENT_VERSION"
+          fi
+
+          # Find existing pre-release tags for this version
+          EXISTING_TAGS=$(git tag -l "v$VERSION_BASE-$RELEASE_TYPE.*" | sort -V)
+
+          if [ -z "$EXISTING_TAGS" ]; then
+            # First pre-release for this version
+            PRERELEASE_NUMBER=1
+            IS_FIRST="true"
+          else
+            # Increment existing pre-release number
+            LAST_TAG=$(echo "$EXISTING_TAGS" | tail -n1)
+            LAST_NUMBER=$(echo "$LAST_TAG" | grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+-'$RELEASE_TYPE'\.\K[0-9]+')
+            PRERELEASE_NUMBER=$((LAST_NUMBER + 1))
+            IS_FIRST="false"
+          fi
+
+          VERSION="$VERSION_BASE-$RELEASE_TYPE.$PRERELEASE_NUMBER"
+          TAG="v$VERSION"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "is-first-prerelease=$IS_FIRST" >> $GITHUB_OUTPUT
+
+          echo "✅ Pre-release version: $TAG"
+
+      - name: Generate pre-release changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          IS_FIRST="${{ steps.version.outputs.is-first-prerelease }}"
+
+          if [ "$IS_FIRST" = "true" ]; then
+            # Get changes since last stable release
+            LAST_STABLE=$(git describe --tags --abbrev=0 --match="v[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "")
+            if [ -n "$LAST_STABLE" ]; then
+              COMMIT_RANGE="$LAST_STABLE..HEAD"
+            else
+              COMMIT_RANGE="HEAD"
+            fi
+          else
+            # Get changes since last pre-release
+            LAST_PRERELEASE=$(git describe --tags --abbrev=0 --match="v*-*" 2>/dev/null)
+            COMMIT_RANGE="$LAST_PRERELEASE..HEAD"
+          fi
+
+          # Generate changelog from commits
+          python -c "
+          import subprocess
+          import re
+          from datetime import datetime
+
+          # Get commits
+          result = subprocess.run(['git', 'log', '--oneline', '--pretty=format:%s', '$COMMIT_RANGE'],
+                                capture_output=True, text=True)
+          commits = result.stdout.strip().split('\n') if result.stdout.strip() else []
+
+          # Parse commits
+          features = []
+          fixes = []
+          breaking = []
+
+          for commit in commits:
+              if not commit.strip():
+                  continue
+
+              if 'BREAKING CHANGE' in commit.upper():
+                  breaking.append(commit)
+              elif commit.startswith('feat'):
+                  features.append(commit)
+              elif commit.startswith(('fix', 'perf')):
+                  fixes.append(commit)
+
+          # Generate changelog
+          changelog = []
+          changelog.append(f'## [{\"$VERSION\"}] - {datetime.now().strftime(\"%Y-%m-%d\")} (Pre-Release)')
+          changelog.append('')
+          changelog.append('⚠️ **This is a pre-release version for testing purposes.**')
+          changelog.append('')
+
+          if breaking:
+              changelog.append('### ⚠️ BREAKING CHANGES')
+              for commit in breaking:
+                  desc = re.sub(r'^[^:]+:', '', commit).strip()
+                  changelog.append(f'- {desc}')
+              changelog.append('')
+
+          if features:
+              changelog.append('### ✨ Features')
+              for commit in features:
+                  desc = re.sub(r'^feat[^:]*:', '', commit).strip()
+                  changelog.append(f'- {desc}')
+              changelog.append('')
+
+          if fixes:
+              changelog.append('### 🐛 Bug Fixes')
+              for commit in fixes:
+                  desc = re.sub(r'^(fix|perf)[^:]*:', '', commit).strip()
+                  changelog.append(f'- {desc}')
+              changelog.append('')
+
+          changelog.append('### 🧪 Testing')
+          changelog.append('- Install: \`pip install markitdown-mcp==$VERSION\`')
+          changelog.append('- Feedback: Report issues in GitHub with pre-release label')
+          changelog.append('')
+
+          changelog_text = '\n'.join(changelog)
+
+          import os
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'changelog<<EOF\n{changelog_text}\nEOF\n')
+
+          print('✅ Pre-release changelog generated')
+          "
+
+  # ==========================================
+  # Quality Gates (can be skipped for emergency)
+  # ==========================================
+  quality-gates:
+    name: Pre-Release Quality Gates
+    runs-on: ubuntu-latest
+    needs: prepare-prerelease
+    if: inputs.skip_quality_gates != true
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run quality checks
+        run: |
+          echo "🔍 Running quality checks for pre-release..."
+
+          # Format check
+          ruff format --check
+
+          # Lint check
+          ruff check
+
+          # Type check
+          mypy markitdown_mcp/ --strict
+
+          # Run tests
+          pytest --cov=markitdown_mcp --cov-report=json --cov-fail-under=70 \
+            tests/unit/ tests/integration/test_mcp_protocol_smoke.py
+
+      - name: Validate MCP server
+        run: |
+          timeout 30 python -c "
+          import asyncio
+          from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+
+          async def test():
+              server = MarkItDownMCPServer()
+              req = MCPRequest(id='test', method='tools/list', params={})
+              resp = await server.handle_request(req)
+              assert resp.result, 'MCP server failed to respond'
+              tools = resp.result['tools']
+              assert len(tools) >= 3, f'Expected 3+ tools, got {len(tools)}'
+              print(f'✅ Pre-release MCP validation passed: {len(tools)} tools')
+
+          asyncio.run(test())
+          "
+
+  # ==========================================
+  # Build Pre-Release Package
+  # ==========================================
+  build-prerelease:
+    name: Build Pre-Release Package
+    runs-on: ubuntu-latest
+    needs: [prepare-prerelease, quality-gates]
+    if: always() && needs.prepare-prerelease.result == 'success' && (needs.quality-gates.result == 'success' || inputs.skip_quality_gates == true)
+    outputs:
+      package-name: ${{ steps.build.outputs.package-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: |
+          pip install build twine
+
+      - name: Build pre-release package
+        id: build
+        run: |
+          VERSION="${{ needs.prepare-prerelease.outputs.version }}"
+
+          # Update version in pyproject.toml
+          python -c "
+          import tomllib
+          import tomli_w
+
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+
+          data['project']['version'] = '$VERSION'
+
+          with open('pyproject.toml', 'wb') as f:
+              tomli_w.dump(data, f)
+
+          print(f'Updated version to $VERSION')
+          "
+
+          # Build package
+          python -m build
+
+          # Extract package info
+          PACKAGE_NAME=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['name'])")
+          echo "package-name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+          echo "📦 Built pre-release package: $PACKAGE_NAME v$VERSION"
+
+      - name: Test package installation
+        run: |
+          # Install from wheel
+          pip install dist/*.whl
+
+          # Basic functionality test
+          python -c "
+          import markitdown_mcp
+          print(f'✅ Pre-release package works: {markitdown_mcp.__version__}')
+          "
+
+          # Test MCP server startup
+          echo '{}' | markitdown-mcp --help >/dev/null
+          echo "✅ MCP server help accessible"
+
+      - name: Upload pre-release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prerelease-dist-${{ needs.prepare-prerelease.outputs.version }}
+          path: dist/
+          retention-days: 7
+
+  # ==========================================
+  # Test PyPI Upload
+  # ==========================================
+  test-pypi-upload:
+    name: Test PyPI Upload
+    runs-on: ubuntu-latest
+    needs: [prepare-prerelease, build-prerelease]
+    environment: test-pypi
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: prerelease-dist-${{ needs.prepare-prerelease.outputs.version }}
+          path: dist/
+
+      - name: Publish to Test PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: dist/
+
+      - name: Verify test installation
+        run: |
+          sleep 60  # Wait for Test PyPI to update
+
+          VERSION="${{ needs.prepare-prerelease.outputs.version }}"
+
+          # Install from Test PyPI
+          pip install --index-url https://test.pypi.org/simple/ \
+                     --extra-index-url https://pypi.org/simple/ \
+                     markitdown-mcp==$VERSION
+
+          # Test basic functionality
+          python -c "
+          import markitdown_mcp
+          print(f'✅ Test PyPI install successful: {markitdown_mcp.__version__}')
+          assert markitdown_mcp.__version__ == '$VERSION', 'Version mismatch'
+          "
+
+  # ==========================================
+  # Create Pre-Release
+  # ==========================================
+  create-prerelease:
+    name: Create GitHub Pre-Release
+    runs-on: ubuntu-latest
+    needs: [prepare-prerelease, build-prerelease, test-pypi-upload]
+    if: always() && needs.prepare-prerelease.result == 'success' && needs.build-prerelease.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: prerelease-dist-${{ needs.prepare-prerelease.outputs.version }}
+          path: dist/
+
+      - name: Create pre-release tag
+        run: |
+          TAG="${{ needs.prepare-prerelease.outputs.tag }}"
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git tag -a "$TAG" -m "Pre-Release $TAG
+
+          This is a pre-release version for testing purposes.
+
+          🧪 **Testing Instructions:**
+          - Install: pip install markitdown-mcp==${{ needs.prepare-prerelease.outputs.version }}
+          - Test your workflows with this version
+          - Report any issues with the 'pre-release' label
+
+          ⚠️ **Not recommended for production use**"
+
+          git push origin "$TAG"
+
+      - name: Create GitHub pre-release
+        run: |
+          TAG="${{ needs.prepare-prerelease.outputs.tag }}"
+          VERSION="${{ needs.prepare-prerelease.outputs.version }}"
+
+          # Enhanced release notes for pre-release
+          cat > release_notes.md << 'EOF'
+          ${{ needs.prepare-prerelease.outputs.changelog }}
+
+          ## 🧪 Pre-Release Testing Guide
+
+          ### Installation
+          ```bash
+          pip install markitdown-mcp==$VERSION
+          ```
+
+          ### Testing Checklist
+          - [ ] Basic MCP server functionality
+          - [ ] Document conversion works as expected
+          - [ ] No regressions from previous version
+          - [ ] Performance is acceptable
+
+          ### Feedback
+          - 🐛 **Bug reports**: Create issue with `pre-release` label
+          - 💡 **Feature feedback**: Comment on this release
+          - 🚨 **Critical issues**: Tag maintainers immediately
+
+          ### Next Steps
+          - Testing period: 24-48 hours
+          - Stable release: After testing completion
+          - Breaking issues: May trigger hotfix release
+
+          ---
+          ⚠️ **This is a pre-release version. Not recommended for production use.**
+          EOF
+
+          gh release create "$TAG" dist/* \
+            --title "🧪 Pre-Release $VERSION" \
+            --notes-file release_notes.md \
+            --prerelease \
+            --verify-tag
+
+          echo "✅ GitHub pre-release created: $TAG"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ==========================================
+  # Post-Release Testing
+  # ==========================================
+  post-release-testing:
+    name: Post-Release Testing
+    runs-on: ubuntu-latest
+    needs: [prepare-prerelease, create-prerelease]
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+    steps:
+      - name: Test installation from PyPI
+        run: |
+          VERSION="${{ needs.prepare-prerelease.outputs.version }}"
+
+          # Install from PyPI
+          pip install markitdown-mcp==$VERSION
+
+          # Comprehensive functionality test
+          python -c "
+          import markitdown_mcp
+          print(f'✅ Installation successful: {markitdown_mcp.__version__}')
+
+          # Test MCP server import
+          from markitdown_mcp.server import MarkItDownMCPServer
+          print('✅ Server import successful')
+
+          # Test basic tool availability
+          import asyncio
+          async def test():
+              server = MarkItDownMCPServer()
+              from markitdown_mcp.server import MCPRequest
+              req = MCPRequest(id='test', method='tools/list', params={})
+              resp = await server.handle_request(req)
+              tools = resp.result['tools']
+              print(f'✅ {len(tools)} tools available')
+              return len(tools) >= 3
+
+          result = asyncio.run(test())
+          assert result, 'Not enough tools available'
+          print('✅ All post-release tests passed')
+          "
+
+  # ==========================================
+  # Notification
+  # ==========================================
+  notify-completion:
+    name: Notify Pre-Release Completion
+    runs-on: ubuntu-latest
+    needs: [prepare-prerelease, create-prerelease, post-release-testing]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          VERSION="${{ needs.prepare-prerelease.outputs.version }}"
+          TAG="${{ needs.prepare-prerelease.outputs.tag }}"
+
+          echo "🎉 Pre-Release Workflow Complete!"
+          echo ""
+          echo "📦 **Version**: $TAG"
+          echo "🔗 **Release**: https://github.com/${{ github.repository }}/releases/tag/$TAG"
+          echo "📥 **Install**: pip install markitdown-mcp==$VERSION"
+          echo ""
+
+          if [[ "${{ needs.create-prerelease.result }}" == "success" ]]; then
+            echo "✅ Pre-release created successfully"
+            echo ""
+            echo "🧪 **Next Steps**:"
+            echo "1. Test the pre-release thoroughly"
+            echo "2. Gather feedback from early adopters"
+            echo "3. Fix any critical issues"
+            echo "4. Promote to stable release when ready"
+          else
+            echo "❌ Pre-release creation failed"
+            echo "Check workflow logs for details"
+          fi
+
+          echo ""
+          echo "📋 **Testing Checklist**:"
+          echo "- [ ] MCP server starts correctly"
+          echo "- [ ] All tools function as expected"
+          echo "- [ ] No regressions from previous version"
+          echo "- [ ] Performance meets expectations"
+          echo "- [ ] Documentation is accurate"

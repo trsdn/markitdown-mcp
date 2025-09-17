@@ -283,8 +283,232 @@ class DocumentConverter:
         return self.analyze_content(markdown)
 ```
 
+## 🚀 Release Management for AI Agents
+
+AI agents and development tools should follow these guidelines when contributing to releases:
+
+### Conventional Commits
+
+**ALWAYS** use conventional commit format for automated version management:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+#### Commit Types for AI Agents
+
+| Type | When to Use | Version Impact |
+|------|-------------|----------------|
+| `feat` | Adding new MCP tools or major functionality | Minor (0.1.0) |
+| `fix` | Bug fixes, security patches | Patch (0.0.1) |
+| `docs` | Documentation updates, AI agent guides | None |
+| `refactor` | Code improvements without functionality change | None |
+| `perf` | Performance optimizations | Patch (0.0.1) |
+| `test` | Test additions or improvements | None |
+| `chore` | Dependencies, build configuration | None |
+| `BREAKING CHANGE` | API changes that break compatibility | Major (1.0.0) |
+
+#### AI Commit Examples
+
+```bash
+# When adding new functionality
+feat(mcp): add support for Excel chart extraction
+
+# When fixing bugs
+fix(security): resolve path traversal in file validation
+
+# When improving performance
+perf(conversion): optimize large PDF processing
+
+# When making breaking changes
+feat(api): redesign tool response format
+
+BREAKING CHANGE: tool responses now return structured data instead of plain text
+```
+
+### AI-Driven Version Detection
+
+AI agents should analyze commit history to determine appropriate version bumps:
+
+```python
+def analyze_version_impact(commits_since_last_release):
+    """
+    Analyze commits to determine semantic version bump needed.
+
+    Returns: 'major', 'minor', 'patch', or 'none'
+    """
+    has_breaking = any('BREAKING CHANGE' in commit.body for commit in commits)
+    has_features = any(commit.type == 'feat' for commit in commits)
+    has_fixes = any(commit.type in ['fix', 'perf'] for commit in commits)
+
+    if has_breaking:
+        return 'major'
+    elif has_features:
+        return 'minor'
+    elif has_fixes:
+        return 'patch'
+    else:
+        return 'none'
+```
+
+### Release Readiness Validation
+
+Before suggesting releases, AI agents should verify:
+
+```python
+def validate_release_readiness():
+    """Check if codebase is ready for release."""
+    checks = {
+        'format_check': run_ruff_format(),
+        'lint_check': run_ruff_lint(),
+        'type_check': run_mypy(),
+        'tests_pass': run_test_suite(),
+        'coverage_ok': check_coverage_threshold(),
+        'docs_updated': verify_documentation(),
+        'security_clean': run_security_scan()
+    }
+
+    failed_checks = [name for name, passed in checks.items() if not passed]
+
+    if failed_checks:
+        return False, f"Failed checks: {', '.join(failed_checks)}"
+    return True, "All checks passed"
+```
+
+### Automated Changelog Generation
+
+AI agents can generate changelog entries from commits:
+
+```python
+def generate_changelog_entry(commits, version):
+    """Generate changelog section from conventional commits."""
+    changelog = f"## [{version}] - {datetime.now().strftime('%Y-%m-%d')}\n\n"
+
+    # Group commits by type
+    features = [c for c in commits if c.type == 'feat']
+    fixes = [c for c in commits if c.type == 'fix']
+    breaking = [c for c in commits if 'BREAKING CHANGE' in c.body]
+
+    if breaking:
+        changelog += "### ⚠️ BREAKING CHANGES\n"
+        for commit in breaking:
+            changelog += f"- {commit.description}\n"
+        changelog += "\n"
+
+    if features:
+        changelog += "### ✨ Features\n"
+        for commit in features:
+            changelog += f"- {commit.description}\n"
+        changelog += "\n"
+
+    if fixes:
+        changelog += "### 🐛 Bug Fixes\n"
+        for commit in fixes:
+            changelog += f"- {commit.description}\n"
+        changelog += "\n"
+
+    return changelog
+```
+
+### AI Release Workflow Integration
+
+When AI agents detect release-worthy changes:
+
+1. **Analyze Commits**: Parse conventional commits since last release
+2. **Determine Version**: Calculate semantic version bump
+3. **Validate Quality**: Ensure all quality gates pass
+4. **Generate Changelog**: Create changelog entry from commits
+5. **Suggest Release**: Propose release with rationale
+
+```python
+async def suggest_release_if_needed():
+    """AI agent workflow for release detection."""
+
+    # Get commits since last release
+    last_tag = get_latest_git_tag()
+    commits = get_commits_since(last_tag)
+
+    # Analyze version impact
+    version_impact = analyze_version_impact(commits)
+
+    if version_impact == 'none':
+        return "No release needed - no significant changes"
+
+    # Validate readiness
+    ready, message = validate_release_readiness()
+    if not ready:
+        return f"Not ready for release: {message}"
+
+    # Calculate new version
+    current_version = parse_version(last_tag)
+    new_version = bump_version(current_version, version_impact)
+
+    # Generate changelog
+    changelog = generate_changelog_entry(commits, new_version)
+
+    return {
+        'action': 'suggest_release',
+        'version': new_version,
+        'changelog': changelog,
+        'commits_included': len(commits),
+        'impact': version_impact
+    }
+```
+
+### Release Communication
+
+AI agents should communicate release information clearly:
+
+```python
+def format_release_summary(release_info):
+    """Format release information for users."""
+    return f"""
+🚀 **Release Suggestion: v{release_info['version']}**
+
+**Impact**: {release_info['impact'].title()} version bump
+**Changes**: {release_info['commits_included']} commits included
+**Type**: {'🔥 Breaking changes' if release_info['impact'] == 'major' else '✨ New features' if release_info['impact'] == 'minor' else '🐛 Bug fixes'}
+
+**Changelog Preview**:
+{release_info['changelog'][:500]}...
+
+**Next Steps**:
+1. Review the proposed changes
+2. Run final quality checks
+3. Create release tag: `git tag v{release_info['version']}`
+4. Push tag to trigger automated release: `git push origin v{release_info['version']}`
+"""
+```
+
+### Emergency Release Handling
+
+For critical security issues, AI agents should:
+
+1. **Identify Severity**: Recognize security-related commits
+2. **Fast-Track Process**: Bypass normal review for critical fixes
+3. **Immediate Notification**: Alert maintainers of urgent release need
+4. **Hotfix Branch**: Suggest hotfix branch workflow
+
+```python
+def detect_emergency_release(commits):
+    """Detect if commits contain critical security fixes."""
+    security_keywords = ['security', 'vulnerability', 'cve', 'exploit', 'xss', 'injection']
+
+    for commit in commits:
+        commit_text = f"{commit.description} {commit.body}".lower()
+        if any(keyword in commit_text for keyword in security_keywords):
+            return True, "Security vulnerability detected - emergency release recommended"
+
+    return False, "No critical security issues detected"
+```
+
 ## 📚 Additional Resources
 
+- **[Release Process Guide](RELEASE.md)** - Complete release documentation
 - **[API Documentation](docs/api/)** - Technical specifications
 - **[Configuration Examples](examples/)** - MCP client configurations
 - **[Testing Guide](docs/development/TESTING_STRATEGY.md)** - Testing approach
