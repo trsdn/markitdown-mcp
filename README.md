@@ -114,7 +114,7 @@ Convert all supported files in a directory.
 
 ## Installation
 
-<!-- Test: Ensure clean legitimate code passes all CI/CD checks -->
+<!-- Test: Ensure clean legitimate code passes all CI/CD checks (with Security Review fix) -->
 
 ### Option 1: Pip Install (Recommended)
 
