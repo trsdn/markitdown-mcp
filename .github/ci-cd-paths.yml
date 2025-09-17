@@ -1,0 +1,33 @@
+# CI/CD-related file patterns for workflow path filtering
+# This file defines which paths should be considered CI/CD maintenance changes
+
+workflows:
+  - '.github/workflows/**'
+  - '.github/actions/**'
+
+scripts:
+  - 'scripts/analyze-version.py'
+  - 'scripts/coverage-diff.py'
+  - 'scripts/generate-schemas.py'
+  - 'scripts/ci-*.py'
+
+github_config:
+  - '.github/dependabot.yml'
+  - '.github/CODEOWNERS'
+  - '.github/pull_request_template.md'
+  - '.github/ISSUE_TEMPLATE/**'
+  - '.github/ci-cd-paths.yml'
+
+# Combined list for use in workflows
+all_paths:
+  - '.github/workflows/**'
+  - '.github/actions/**'
+  - 'scripts/analyze-version.py'
+  - 'scripts/coverage-diff.py'
+  - 'scripts/generate-schemas.py'
+  - 'scripts/ci-*.py'
+  - '.github/dependabot.yml'
+  - '.github/CODEOWNERS'
+  - '.github/pull_request_template.md'
+  - '.github/ISSUE_TEMPLATE/**'
+  - '.github/ci-cd-paths.yml'

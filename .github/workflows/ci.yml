@@ -2,9 +2,32 @@ name: CI
 
 on:
   push:
-    branches-ignore: [ci-cd-maintenance]
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/analyze-version.py'
+      - 'scripts/coverage-diff.py'
+      - 'scripts/generate-schemas.py'
+      - 'scripts/ci-*.py'
+      - '.github/dependabot.yml'
+      - '.github/CODEOWNERS'
+      - '.github/pull_request_template.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/ci-cd-paths.yml'
   pull_request:
-    branches-ignore: [ci-cd-maintenance]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/analyze-version.py'
+      - 'scripts/coverage-diff.py'
+      - 'scripts/generate-schemas.py'
+      - 'scripts/ci-*.py'
+      - '.github/dependabot.yml'
+      - '.github/CODEOWNERS'
+      - '.github/pull_request_template.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/ci-cd-paths.yml'
 
 # Cancel duplicate runs
 concurrency:

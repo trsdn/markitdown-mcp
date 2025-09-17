@@ -1,15 +1,36 @@
 name: Fast Tests
 
-on:
-  pull_request:
-    branches-ignore: [ci-cd-maintenance]
+on:  pull_request:
+    paths-ignore:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/analyze-version.py'
+      - 'scripts/coverage-diff.py'
+      - 'scripts/generate-schemas.py'
+      - 'scripts/ci-*.py'
+      - '.github/dependabot.yml'
+      - '.github/CODEOWNERS'
+      - '.github/pull_request_template.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/ci-cd-paths.yml'
     paths:
       - '**.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
-      - '.github/workflows/fast-tests.yml'
-  push:
-    branches-ignore: [ci-cd-maintenance]
+      - '.github/workflows/fast-tests.yml'  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'scripts/analyze-version.py'
+      - 'scripts/coverage-diff.py'
+      - 'scripts/generate-schemas.py'
+      - 'scripts/ci-*.py'
+      - '.github/dependabot.yml'
+      - '.github/CODEOWNERS'
+      - '.github/pull_request_template.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/ci-cd-paths.yml'
   workflow_dispatch:
 
 permissions:
