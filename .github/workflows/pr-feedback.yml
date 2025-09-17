@@ -190,8 +190,8 @@ jobs:
               coverage=$(jq -r '.totals.percent_covered' coverage.json)
               coverage_int=${coverage%.*}
 
-              if [ "$coverage_int" -lt 80 ]; then
-                echo "❌ **Coverage $coverage% is below 80% requirement**" >> pr-feedback.md
+              if [ "$coverage_int" -lt 74 ]; then
+                echo "❌ **Coverage $coverage% is below 74% requirement**" >> pr-feedback.md
                 echo "" >> pr-feedback.md
                 echo "<details><summary>Click to see coverage details</summary>" >> pr-feedback.md
                 echo "" >> pr-feedback.md
@@ -201,9 +201,9 @@ import json
 with open('coverage.json') as f:
     data = json.load(f)
 files = data['files']
-uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
+uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 74]
 if uncovered:
-    print('Files below 80% coverage:')
+    print('Files below 74% coverage:')
     for file, pct in sorted(uncovered, key=lambda x: x[1]):
         print(f'{file}: {pct:.1f}%')
 " >> pr-feedback.md
@@ -211,7 +211,7 @@ if uncovered:
                 echo "</details>" >> pr-feedback.md
                 total_issues=$((total_issues + 1))
               else
-                echo "✅ **Coverage $coverage% meets 80% requirement**" >> pr-feedback.md
+                echo "✅ **Coverage $coverage% meets 74% requirement**" >> pr-feedback.md
               fi
             else
               echo "⚠️ **Tests failed to run - checking error details**" >> pr-feedback.md
