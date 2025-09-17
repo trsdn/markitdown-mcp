@@ -155,7 +155,7 @@ jobs:
               echo "Security scanning: $file"
 
               # Check for shell injection risks
-              if grep -n "run:.*\${{" "$file" | grep -v "github\." | grep -v "inputs\." | grep -v "secrets\."; then
+              if grep -n "run:.*\\\${{" "$file" | grep -v "github\\." | grep -v "inputs\\." | grep -v "secrets\\."; then
                 echo "⚠️ $file - Potential shell injection risk with user-controlled input"
                 security_issues=$((security_issues + 1))
               fi
@@ -171,7 +171,7 @@ jobs:
               fi
 
               # Check for dangerous commands
-              if grep -n -E "(curl|wget|eval|exec).*\\\$" "$file"; then
+              if grep -n -E "(curl|wget|eval|exec).*\\$" "$file"; then
                 echo "⚠️ $file - Contains potentially dangerous commands with variables"
                 security_issues=$((security_issues + 1))
               fi
