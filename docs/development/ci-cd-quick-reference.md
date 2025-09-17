@@ -45,6 +45,13 @@ gh release create v1.2.3        # Manual release creation
 
 ## 🔍 Quality Requirements
 
+### Branch Protection (ENFORCED)
+- ✅ **PR Review**: 1 approving review required
+- ✅ **Status Checks**: All 4 required checks must pass
+- ✅ **Code Owners**: Critical files need owner approval
+- ✅ **No Force Push**: History protection enabled
+- ✅ **Admin Rules**: Apply to all users including admins
+
 ### Code Quality
 - ✅ **Format**: `ruff format` compliant
 - ✅ **Lint**: `ruff check` passing

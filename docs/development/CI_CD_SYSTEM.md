@@ -226,19 +226,20 @@ Analysis Process:
 
 All PRs must pass these gates before merging:
 
-1. **Fast Tests** ✅
+#### **Required Status Checks** (Enforced by Branch Protection)
+1. **Fast Tests Summary** ✅
    - Unit tests pass
    - Integration smoke tests pass
    - No high-severity security issues
 
-2. **CI Quality Gates** ✅
+2. **All CI Gates Passed** ✅
    - Code formatting compliant
    - Linting passes
    - Type checking passes
    - 80%+ test coverage
    - MCP protocol validation
 
-3. **Test Suite** ✅
+3. **Test Results Summary** ✅
    - Multi-platform compatibility
    - Python version compatibility
    - Documentation builds successfully
@@ -247,6 +248,12 @@ All PRs must pass these gates before merging:
    - No critical vulnerabilities
    - No hardcoded secrets
    - Dependency audit clean
+
+#### **Review Requirements** (Enforced by Branch Protection)
+- **1 Approving Review Required** - All PRs must be reviewed by a maintainer
+- **Stale Reviews Dismissed** - Reviews are dismissed when new commits are pushed
+- **Code Owner Review** - Critical files require review from designated code owners
+- **Admin Enforcement** - Rules apply to all users including repository administrators
 
 ### Coverage Requirements
 
