@@ -63,7 +63,6 @@ jobs:
   build-sphinx:
     name: Build Sphinx Docs
     runs-on: ubuntu-latest
-    if: ${{ hashFiles('docs/conf.py') != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -266,4 +265,3 @@ jobs:
           path: |
             coverage-report.md
             docs/coverage-badge.svg
-
