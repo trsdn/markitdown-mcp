@@ -776,12 +776,12 @@ class MarkItDownMCPServer:
                         "file_content": {
                             "type": "string",
                             "description": (
-                                "Base64 encoded file content " "(alternative to file_path)"
+                                "Base64 encoded file content (alternative to file_path)"
                             ),
                         },
                         "filename": {
                             "type": "string",
-                            "description": "Original filename when using " "file_content",
+                            "description": "Original filename when using file_content",
                         },
                     },
                     "anyOf": [
@@ -797,7 +797,7 @@ class MarkItDownMCPServer:
             },
             {
                 "name": "convert_directory",
-                "description": "Convert all supported files in a " "directory to Markdown",
+                "description": "Convert all supported files in a directory to Markdown",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -807,7 +807,7 @@ class MarkItDownMCPServer:
                         },
                         "output_directory": {
                             "type": "string",
-                            "description": "Path to the output directory " "(optional)",
+                            "description": "Path to the output directory (optional)",
                         },
                     },
                     "required": ["input_directory"],
