@@ -207,13 +207,16 @@ jobs:
           fetch-depth: 0
 
       - name: Check for security anti-patterns
+        shell: bash
         run: |
-          # Check for hardcoded secrets patterns
-          git diff origin/${{ github.base_ref }}..HEAD | grep -E '^\+.*' | grep -i -E '(password|secret|key|token|api_key).*=.*["\'][^"\']{8,}["\']' | while read line; do
-            echo "::error::Potential hardcoded secret detected: $line"
+          # Check for hardcoded secrets patterns - simplified pattern
+          echo "Checking for potential hardcoded secrets..."
+          git diff origin/${{ github.base_ref }}..HEAD | grep -E '^\+.*' | grep -i -E '(password|secret|key|token|api_key).*=' | while read line; do
+            echo "::warning::Potential hardcoded secret pattern detected: $line"
           done || true
 
           # Check for SQL injection patterns
+          echo "Checking for SQL injection patterns..."
           git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
             if [ -f "$file" ]; then
               grep -n -i -E '(execute|query).*%.*s' "$file" | while IFS=: read -r line_num content; do
@@ -223,19 +226,23 @@ jobs:
           done
 
           # Check for unsafe file operations
+          echo "Checking for unsafe file operations..."
           git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
             if [ -f "$file" ]; then
-              grep -n -E 'open[[:space:]]*\\(' "$file" | grep -v -E '(with[[:space:]]+open|mode=.*["\'][rw]["\'])' | while IFS=: read -r line_num content; do
+              grep -n -E 'open\s*\(' "$file" | grep -v -E '(with\s+open)' | while IFS=: read -r line_num content; do
                 echo "::notice file=$file,line=$line_num::Consider using 'with open()' for safer file handling: $content"
               done || true
             fi
           done
 
           # Check for eval/exec usage
+          echo "Checking for dangerous eval/exec usage..."
           git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
             if [ -f "$file" ]; then
-              grep -n -E '\\b(eval|exec)[[:space:]]*\\(' "$file" | while IFS=: read -r line_num content; do
+              grep -n -E '\b(eval|exec)\s*\(' "$file" | while IFS=: read -r line_num content; do
                 echo "::error file=$file,line=$line_num::Dangerous eval/exec usage detected: $content"
               done || true
             fi
           done
+
+          echo "Security pattern check completed."
