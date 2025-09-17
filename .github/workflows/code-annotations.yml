@@ -1,0 +1,241 @@
+name: Code Annotations & Inline Comments
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: code-annotations-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Generate Inline Code Annotations
+  # ==========================================
+  annotate-code-issues:
+    name: Code Issue Annotations
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install tools
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install ruff mypy bandit
+
+      - name: Run ruff with GitHub annotations
+        run: |
+          # Ruff check with GitHub output format for inline annotations
+          ruff check . --output-format=github || true
+
+      - name: Run mypy with annotations
+        run: |
+          # MyPy with error format that GitHub can parse
+          mypy markitdown_mcp --show-error-codes --no-error-summary || true
+
+      - name: Run security scan with annotations
+        run: |
+          # Bandit with custom output for annotations
+          bandit -r markitdown_mcp/ -f json -o bandit_results.json || true
+
+          # Convert bandit results to GitHub annotations
+          python -c "
+          import json
+          import sys
+          import os
+
+          try:
+              with open('bandit_results.json') as f:
+                  results = json.load(f)
+
+              for issue in results.get('results', []):
+                  filename = issue['filename']
+                  line = issue['line_number']
+                  severity = issue['issue_severity']
+                  message = issue['issue_text']
+                  rule = issue['test_name']
+
+                  # Create GitHub annotation
+                  if severity == 'HIGH':
+                      annotation_level = 'error'
+                  elif severity == 'MEDIUM':
+                      annotation_level = 'warning'
+                  else:
+                      annotation_level = 'notice'
+
+                  print(f'::{annotation_level} file={filename},line={line}::[{rule}] {message}')
+          except Exception as e:
+              print(f'::warning::Could not parse bandit results: {e}')
+          "
+
+      - name: Check for large files or potential issues
+        run: |
+          # Check for large files that might slow down CI
+          find . -type f -size +1M -not -path "./.git/*" -not -path "./.*" | while read file; do
+            size=$(du -h "$file" | cut -f1)
+            echo "::warning file=$file::Large file detected ($size) - consider if this is necessary in the repository"
+          done
+
+          # Check for TODO/FIXME comments in changed files
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep -E '\.(py|md|yml|yaml)$' | while read file; do
+            if [ -f "$file" ]; then
+              grep -n -E "(TODO|FIXME|XXX|HACK)" "$file" | while IFS=: read -r line_num content; do
+                echo "::notice file=$file,line=$line_num::Found TODO/FIXME: $content"
+              done || true
+            fi
+          done
+
+          # Check for print statements in Python files (potential debug code)
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
+            if [ -f "$file" ]; then
+              grep -n "print(" "$file" | while IFS=: read -r line_num content; do
+                echo "::warning file=$file,line=$line_num::Debug print statement found: $content"
+              done || true
+            fi
+          done
+
+          # Check for missing docstrings in new Python functions
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
+            if [ -f "$file" ]; then
+              python -c "
+          import ast
+          import sys
+
+          try:
+              with open('$file', 'r') as f:
+                  content = f.read()
+
+              tree = ast.parse(content)
+
+              for node in ast.walk(tree):
+                  if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                      if node.name.startswith('_'):
+                          continue  # Skip private functions
+
+                      docstring = ast.get_docstring(node)
+                      if not docstring:
+                          print(f'::notice file=$file,line={node.lineno}::Function \"{node.name}\" missing docstring')
+          except:
+              pass  # Skip files that can't be parsed
+              " || true
+            fi
+          done
+
+      - name: Performance and complexity checks
+        run: |
+          # Check for overly complex functions (high cyclomatic complexity)
+          python -c "
+          import ast
+          import sys
+          from pathlib import Path
+
+          class ComplexityVisitor(ast.NodeVisitor):
+              def __init__(self):
+                  self.complexity = 0
+
+              def visit_If(self, node):
+                  self.complexity += 1
+                  self.generic_visit(node)
+
+              def visit_For(self, node):
+                  self.complexity += 1
+                  self.generic_visit(node)
+
+              def visit_While(self, node):
+                  self.complexity += 1
+                  self.generic_visit(node)
+
+              def visit_Try(self, node):
+                  self.complexity += 1
+                  self.generic_visit(node)
+
+          def check_file_complexity(filepath):
+              try:
+                  with open(filepath, 'r') as f:
+                      content = f.read()
+
+                  tree = ast.parse(content)
+
+                  for node in ast.walk(tree):
+                      if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                          visitor = ComplexityVisitor()
+                          visitor.visit(node)
+
+                          if visitor.complexity > 10:
+                              print(f'::warning file={filepath},line={node.lineno}::Function \"{node.name}\" has high complexity ({visitor.complexity})')
+              except:
+                  pass
+
+          # Check changed Python files
+          import subprocess
+          import os
+
+          try:
+              result = subprocess.run(['git', 'diff', 'origin/${{ github.base_ref }}..HEAD', '--name-only'],
+                                    capture_output=True, text=True)
+              for file in result.stdout.strip().split('\n'):
+                  if file.endswith('.py') and os.path.exists(file):
+                      check_file_complexity(file)
+          except:
+              pass
+          "
+
+  # ==========================================
+  # Security-focused Code Review
+  # ==========================================
+  security-review-annotations:
+    name: Security Review Annotations
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for security anti-patterns
+        run: |
+          # Check for hardcoded secrets patterns
+          git diff origin/${{ github.base_ref }}..HEAD | grep -E '^\+.*' | grep -i -E '(password|secret|key|token|api_key).*=.*["\'][^"\']{8,}["\']' | while read line; do
+            echo "::error::Potential hardcoded secret detected: $line"
+          done || true
+
+          # Check for SQL injection patterns
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
+            if [ -f "$file" ]; then
+              grep -n -i -E '(execute|query).*%.*s' "$file" | while IFS=: read -r line_num content; do
+                echo "::warning file=$file,line=$line_num::Potential SQL injection risk (string formatting in query): $content"
+              done || true
+            fi
+          done
+
+          # Check for unsafe file operations
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
+            if [ -f "$file" ]; then
+              grep -n -E 'open\s*\(' "$file" | grep -v -E '(with\s+open|mode=.*["\'][rw]["\'])' | while IFS=: read -r line_num content; do
+                echo "::notice file=$file,line=$line_num::Consider using 'with open()' for safer file handling: $content"
+              done || true
+            fi
+          done
+
+          # Check for eval/exec usage
+          git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
+            if [ -f "$file" ]; then
+              grep -n -E '\b(eval|exec)\s*\(' "$file" | while IFS=: read -r line_num content; do
+                echo "::error file=$file,line=$line_num::Dangerous eval/exec usage detected: $content"
+              done || true
+            fi
+          done

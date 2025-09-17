@@ -310,20 +310,50 @@ jobs:
             coverage=$(python -c "import json; print(f\"{json.load(open('test-results/coverage.json'))['totals']['percent_covered']:.1f}%\")")
           fi
 
-          # Build status table
-          cat > pr-comment.md << 'EOF'
+          # Determine overall status
+          overall_status="✅ All Passed"
+          if [[ "${{ needs.quality-checks.result }}" != "success" || \
+                "${{ needs.unit-tests-coverage.result }}" != "success" || \
+                "${{ needs.mcp-contract-checks.result }}" != "success" || \
+                "${{ needs.dependency-checks.result }}" != "success" ]]; then
+            overall_status="❌ Issues Found"
+          fi
+
+          # Build enhanced status table
+          cat > pr-comment.md << EOF
           ## 🔍 CI Quality Gates Summary
 
-          | Check | Status | Details |
-          |-------|--------|---------|
-          | 🎨 Format | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff format check |
-          | 🔧 Lint | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff linting |
-          | 📝 Types | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '⚠️ Check' }} | mypy type checking |
-          | 🧪 Tests | ${{ needs.unit-tests-coverage.result == 'success' && '✅ Passed' || '❌ Failed' }} | Unit tests |
-          | 📊 Coverage | ${coverage} | Minimum: 80% |
-          | 🔌 MCP | ${{ needs.mcp-contract-checks.result == 'success' && '✅ Valid' || '❌ Invalid' }} | Protocol compliance |
-          | 🔒 Security | ${{ needs.dependency-checks.result == 'success' && '✅ Clean' || '⚠️ Issues' }} | Dependency audit |
+          **Overall Status**: $overall_status
 
+          | Check | Status | Details | Action Required |
+          |-------|--------|---------|-----------------|
+          | 🎨 Format | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff format check | ${{ needs.quality-checks.result == 'success' && 'None' || 'Run \`ruff format .\`' }} |
+          | 🔧 Lint | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff linting | ${{ needs.quality-checks.result == 'success' && 'None' || 'Run \`ruff check . --fix\`' }} |
+          | 📝 Types | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '⚠️ Check' }} | mypy type checking | ${{ needs.quality-checks.result == 'success' && 'None' || 'Add type annotations' }} |
+          | 🧪 Tests | ${{ needs.unit-tests-coverage.result == 'success' && '✅ Passed' || '❌ Failed' }} | Unit tests | ${{ needs.unit-tests-coverage.result == 'success' && 'None' || 'Fix failing tests' }} |
+          | 📊 Coverage | ${coverage} | Minimum: 80% | $([ "${coverage%.*}" -ge 80 ] 2>/dev/null && echo "None" || echo "Add more tests") |
+          | 🔌 MCP | ${{ needs.mcp-contract-checks.result == 'success' && '✅ Valid' || '❌ Invalid' }} | Protocol compliance | ${{ needs.mcp-contract-checks.result == 'success' && 'None' || 'Fix MCP protocol issues' }} |
+          | 🔒 Security | ${{ needs.dependency-checks.result == 'success' && '✅ Clean' || '⚠️ Issues' }} | Dependency audit | ${{ needs.dependency-checks.result == 'success' && 'None' || 'Review security findings' }} |
+
+          ### 🔗 Quick Links
+          - [View detailed analysis](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          - [See workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          ### 🛠️ Quick Fix Commands
+          \`\`\`bash
+          # Fix most issues automatically
+          ruff format .
+          ruff check . --fix
+
+          # Run tests locally
+          pytest tests/unit/ --cov=markitdown_mcp
+
+          # Check types
+          mypy markitdown_mcp
+          \`\`\`
+
+          ---
+          *Last updated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*
           EOF
 
           echo "coverage=${coverage}" >> $GITHUB_OUTPUT
@@ -331,6 +361,7 @@ jobs:
       - name: Post PR comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
+          header: ci-quality-gates
           recreate: true
           path: pr-comment.md
 
