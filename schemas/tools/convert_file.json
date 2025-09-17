@@ -1,0 +1,40 @@
+{
+  "name": "convert_file",
+  "description": "Convert a file to Markdown using MarkItDown",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "file_path": {
+        "type": "string",
+        "description": "Path to the file to convert"
+      },
+      "file_content": {
+        "type": "string",
+        "description": "Base64 encoded file content (alternative to file_path)"
+      },
+      "filename": {
+        "type": "string",
+        "description": "Original filename when using file_content"
+      }
+    },
+    "anyOf": [
+      {
+        "required": [
+          "file_path"
+        ]
+      },
+      {
+        "required": [
+          "file_content",
+          "filename"
+        ]
+      }
+    ]
+  },
+  "required_args": [],
+  "optional_args": [
+    "file_path",
+    "file_content",
+    "filename"
+  ]
+}

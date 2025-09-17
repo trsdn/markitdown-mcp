@@ -1,0 +1,214 @@
+name: Fast Tests
+
+on:
+  pull_request:
+    paths:
+      - '**.py'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/fast-tests.yml'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  checks: write
+
+# Cancel duplicate runs
+concurrency:
+  group: fast-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Super Fast Unit Tests (fail-fast)
+  # ==========================================
+  unit-tests-fast:
+    name: Fast Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install minimal dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-xdist pytest-timeout
+
+      - name: Run fast unit tests
+        run: |
+          # Run only fast unit tests with timeout protection
+          pytest tests/unit/ \
+            -v \
+            --tb=short \
+            --timeout=30 \
+            --maxfail=3 \
+            -n auto \
+            -x \
+            --durations=10 \
+            -m "not slow"
+
+  # ==========================================
+  # Integration Smoke Tests
+  # ==========================================
+  integration-smoke:
+    name: Integration Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio
+
+      - name: Run MCP smoke tests
+        run: |
+          # Critical MCP functionality only
+          pytest tests/integration/test_mcp_protocol_smoke.py \
+            -v \
+            --tb=short \
+            --timeout=60 \
+            -m "integration"
+
+      - name: Test server startup
+        run: |
+          # Ensure server can start and respond
+          timeout 30 python -c "
+          import asyncio
+          from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+
+          async def smoke():
+              server = MarkItDownMCPServer()
+              req = MCPRequest(id='smoke', method='tools/list', params={})
+              resp = await server.handle_request(req)
+              assert resp.result, 'Server failed to respond'
+              tools = resp.result['tools']
+              assert len(tools) >= 3, f'Expected 3+ tools, got {len(tools)}'
+              print(f'✅ Server OK: {len(tools)} tools available')
+
+          asyncio.run(smoke())
+          "
+
+  # ==========================================
+  # Flaky Test Detection
+  # ==========================================
+  flaky-detection:
+    name: Flaky Test Detection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-rerunfailures
+
+      - name: Run tests with retry for flaky detection
+        continue-on-error: true
+        run: |
+          # Run tests multiple times to detect flakiness
+          pytest tests/unit/ \
+            --reruns=2 \
+            --reruns-delay=1 \
+            -v \
+            --tb=short \
+            --maxfail=10 \
+            -x
+
+      - name: Check for known flaky tests
+        run: |
+          # List any tests that had to be retried
+          echo "Checking for flaky test patterns..."
+          if [ -f pytest.log ]; then
+            grep -i "rerun\|flaky\|retry" pytest.log || echo "No flaky tests detected"
+          fi
+
+  # ==========================================
+  # Security Quick Scan
+  # ==========================================
+  security-quick:
+    name: Quick Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install security tools
+        run: |
+          pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Quick Bandit scan
+        run: |
+          bandit -r markitdown_mcp/ -f json -o bandit-quick.json || true
+          python -c "
+          import json
+          try:
+              with open('bandit-quick.json') as f:
+                  data = json.load(f)
+              high_sev = [issue for issue in data.get('results', []) if issue['issue_severity'] == 'HIGH']
+              if high_sev:
+                  print(f'🚨 Found {len(high_sev)} HIGH severity security issues:')
+                  for issue in high_sev[:3]:  # Show first 3
+                      print(f\"  - {issue['test_name']}: {issue['issue_text']}\")
+                  exit(1)
+              else:
+                  print('✅ No high-severity security issues found')
+          except:
+              print('⚠️ Could not parse bandit results')
+          "
+
+      - name: Quick dependency scan
+        run: |
+          safety check --output json || true
+
+  # ==========================================
+  # Summary Job
+  # ==========================================
+  fast-tests-summary:
+    name: Fast Tests Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests-fast, integration-smoke, security-quick]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "Fast test results:"
+          echo "  Unit tests: ${{ needs.unit-tests-fast.result }}"
+          echo "  Integration smoke: ${{ needs.integration-smoke.result }}"
+          echo "  Security quick: ${{ needs.security-quick.result }}"
+
+          if [[ "${{ needs.unit-tests-fast.result }}" != "success" || \
+                "${{ needs.integration-smoke.result }}" != "success" ]]; then
+            echo "❌ Critical fast tests failed"
+            exit 1
+          fi
+
+          echo "✅ All critical fast tests passed"

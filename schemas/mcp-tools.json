@@ -1,0 +1,159 @@
+{
+  "generated_at": "auto-generated",
+  "server_info": {
+    "description": "MCP server for document to Markdown conversion",
+    "name": "markitdown-mcp",
+    "version": "1.0.0"
+  },
+  "stats": {
+    "tool_names": [
+      "convert_file",
+      "list_supported_formats",
+      "convert_directory"
+    ],
+    "total_tools": 3
+  },
+  "tool_schemas": {
+    "convert_directory": {
+      "description": "Convert all supported files in a directory to Markdown",
+      "input_schema": {
+        "properties": {
+          "input_directory": {
+            "description": "Path to the input directory",
+            "type": "string"
+          },
+          "output_directory": {
+            "description": "Path to the output directory (optional)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "input_directory"
+        ],
+        "type": "object"
+      },
+      "name": "convert_directory",
+      "optional_args": [
+        "output_directory"
+      ],
+      "required_args": [
+        "input_directory"
+      ]
+    },
+    "convert_file": {
+      "description": "Convert a file to Markdown using MarkItDown",
+      "input_schema": {
+        "anyOf": [
+          {
+            "required": [
+              "file_path"
+            ]
+          },
+          {
+            "required": [
+              "file_content",
+              "filename"
+            ]
+          }
+        ],
+        "properties": {
+          "file_content": {
+            "description": "Base64 encoded file content (alternative to file_path)",
+            "type": "string"
+          },
+          "file_path": {
+            "description": "Path to the file to convert",
+            "type": "string"
+          },
+          "filename": {
+            "description": "Original filename when using file_content",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "convert_file",
+      "optional_args": [
+        "file_path",
+        "file_content",
+        "filename"
+      ],
+      "required_args": []
+    },
+    "list_supported_formats": {
+      "description": "List all supported file formats for conversion",
+      "input_schema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_supported_formats",
+      "optional_args": [],
+      "required_args": []
+    }
+  },
+  "tools": [
+    {
+      "description": "Convert a file to Markdown using MarkItDown",
+      "inputSchema": {
+        "anyOf": [
+          {
+            "required": [
+              "file_path"
+            ]
+          },
+          {
+            "required": [
+              "file_content",
+              "filename"
+            ]
+          }
+        ],
+        "properties": {
+          "file_content": {
+            "description": "Base64 encoded file content (alternative to file_path)",
+            "type": "string"
+          },
+          "file_path": {
+            "description": "Path to the file to convert",
+            "type": "string"
+          },
+          "filename": {
+            "description": "Original filename when using file_content",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "name": "convert_file"
+    },
+    {
+      "description": "List all supported file formats for conversion",
+      "inputSchema": {
+        "properties": {},
+        "type": "object"
+      },
+      "name": "list_supported_formats"
+    },
+    {
+      "description": "Convert all supported files in a directory to Markdown",
+      "inputSchema": {
+        "properties": {
+          "input_directory": {
+            "description": "Path to the input directory",
+            "type": "string"
+          },
+          "output_directory": {
+            "description": "Path to the output directory (optional)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "input_directory"
+        ],
+        "type": "object"
+      },
+      "name": "convert_directory"
+    }
+  ],
+  "version": "2024-11-05"
+}

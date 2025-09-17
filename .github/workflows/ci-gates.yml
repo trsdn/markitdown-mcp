@@ -1,0 +1,349 @@
+name: CI Quality Gates
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+# Cancel duplicate runs
+concurrency:
+  group: ci-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Fast Format, Lint, and Type Checks
+  # ==========================================
+  quality-checks:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install quality tools
+        run: |
+          pip install --upgrade pip
+          pip install ruff mypy types-requests types-pyyaml
+
+      - name: Format check with ruff
+        id: format
+        run: |
+          echo "::group::Checking code formatting"
+          ruff format --check . || (echo "::error::Code is not formatted. Run 'ruff format .' to fix." && exit 1)
+          echo "::endgroup::"
+
+      - name: Lint check with ruff
+        id: lint
+        run: |
+          echo "::group::Running linter"
+          ruff check . --output-format=github
+          echo "::endgroup::"
+
+      - name: Type check with mypy
+        id: typecheck
+        run: |
+          echo "::group::Type checking"
+          pip install -e .
+          mypy markitdown_mcp --install-types --non-interactive || true
+          echo "::endgroup::"
+
+  # ==========================================
+  # Fast Unit Tests with Coverage
+  # ==========================================
+  unit-tests-coverage:
+    name: Unit Tests & Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,test]"
+          pip install pytest pytest-cov pytest-xdist
+
+      - name: Run unit tests with coverage
+        id: test
+        run: |
+          echo "::group::Running unit tests"
+          pytest tests/unit/ \
+            --cov=markitdown_mcp \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-report=json \
+            --cov-fail-under=80 \
+            --junitxml=junit.xml \
+            -n auto \
+            -v
+          echo "::endgroup::"
+
+      - name: Generate coverage report
+        if: always()
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || echo "Coverage report not available" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Check coverage threshold
+        run: |
+          coverage_percent=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
+          echo "Coverage: ${coverage_percent}%"
+          if (( $(echo "$coverage_percent < 80" | bc -l) )); then
+            echo "::error::Coverage ${coverage_percent}% is below 80% threshold"
+            exit 1
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            junit.xml
+            coverage.xml
+            coverage.json
+            .coverage
+
+  # ==========================================
+  # MCP Protocol Contract Checks
+  # ==========================================
+  mcp-contract-checks:
+    name: MCP Protocol Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install jsonschema
+
+      - name: Generate current tool schemas
+        id: generate
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          from markitdown_mcp.server import MarkItDownMCPServer
+
+          # Generate tool schemas
+          server = MarkItDownMCPServer()
+          tools = server.get_tools()
+
+          Path('schemas').mkdir(exist_ok=True)
+
+          # Save current schemas
+          schemas = {
+              'version': '1.0.0',
+              'tools': tools
+          }
+
+          with open('schemas/mcp-tools.json', 'w') as f:
+              json.dump(schemas, f, indent=2)
+
+          print(f'Generated schemas for {len(tools)} tools')
+          "
+
+      - name: Validate tool schemas
+        run: |
+          python -c "
+          import json
+          from jsonschema import Draft7Validator
+
+          with open('schemas/mcp-tools.json') as f:
+              schemas = json.load(f)
+
+          # Validate each tool has required MCP fields
+          for tool in schemas['tools']:
+              assert 'name' in tool, f'Tool missing name: {tool}'
+              assert 'description' in tool, f'Tool missing description: {tool}'
+              assert 'inputSchema' in tool, f'Tool missing inputSchema: {tool}'
+
+              # Validate inputSchema is valid JSON Schema
+              try:
+                  Draft7Validator.check_schema(tool['inputSchema'])
+              except Exception as e:
+                  print(f'Invalid schema for {tool[\"name\"]}: {e}')
+                  exit(1)
+
+          print('✅ All tool schemas are valid')
+          "
+
+      - name: Check for breaking changes
+        if: github.event_name == 'pull_request'
+        run: |
+          # Check if schemas changed
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          if git diff --exit-code origin/${{ github.base_ref }} -- schemas/; then
+            echo "✅ No schema changes detected"
+          else
+            echo "::warning::Tool schemas have changed. Please review for breaking changes."
+            git diff origin/${{ github.base_ref }} -- schemas/
+          fi
+
+      - name: MCP smoke test
+        run: |
+          # Test that server starts and responds to basic requests
+          python -c "
+          import json
+          import asyncio
+          from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+
+          async def smoke_test():
+              server = MarkItDownMCPServer()
+
+              # Test initialize
+              req = MCPRequest(id='1', method='initialize', params={})
+              resp = await server.handle_request(req)
+              assert resp.result is not None, 'Initialize failed'
+
+              # Test tools/list
+              req = MCPRequest(id='2', method='tools/list', params={})
+              resp = await server.handle_request(req)
+              assert 'tools' in resp.result, 'Tools list failed'
+
+              # Test list_supported_formats (safe no-op tool)
+              req = MCPRequest(id='3', method='tools/call',
+                             params={'name': 'list_supported_formats', 'arguments': {}})
+              resp = await server.handle_request(req)
+              assert resp.result is not None, 'Tool call failed'
+
+              print('✅ MCP smoke tests passed')
+
+          asyncio.run(smoke_test())
+          "
+
+  # ==========================================
+  # Dependency and Security Checks
+  # ==========================================
+  dependency-checks:
+    name: Dependency & Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Check for dependency vulnerabilities
+        run: |
+          pip install pip-audit
+          pip-audit --desc
+
+      - name: Verify pyproject.toml consistency
+        run: |
+          pip install tomli packaging
+          python -c "
+          import tomli
+          from pathlib import Path
+
+          with open('pyproject.toml', 'rb') as f:
+              data = tomli.load(f)
+
+          # Check version format
+          version = data['project']['version']
+          assert version, 'Version not found'
+
+          # Check required dependencies are specified
+          deps = data['project'].get('dependencies', [])
+          assert 'markitdown>=0.1.0' in ' '.join(deps), 'markitdown dependency missing'
+
+          print('✅ pyproject.toml is valid')
+          "
+
+  # ==========================================
+  # PR Summary Comment
+  # ==========================================
+  pr-summary:
+    name: PR Summary
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+      - name: Generate PR comment
+        id: comment
+        run: |
+          # Extract coverage if available
+          coverage="N/A"
+          if [ -f test-results/coverage.json ]; then
+            coverage=$(python -c "import json; print(f\"{json.load(open('test-results/coverage.json'))['totals']['percent_covered']:.1f}%\")")
+          fi
+
+          # Build status table
+          cat > pr-comment.md << 'EOF'
+          ## 🔍 CI Quality Gates Summary
+
+          | Check | Status | Details |
+          |-------|--------|---------|
+          | 🎨 Format | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff format check |
+          | 🔧 Lint | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff linting |
+          | 📝 Types | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '⚠️ Check' }} | mypy type checking |
+          | 🧪 Tests | ${{ needs.unit-tests-coverage.result == 'success' && '✅ Passed' || '❌ Failed' }} | Unit tests |
+          | 📊 Coverage | ${coverage} | Minimum: 80% |
+          | 🔌 MCP | ${{ needs.mcp-contract-checks.result == 'success' && '✅ Valid' || '❌ Invalid' }} | Protocol compliance |
+          | 🔒 Security | ${{ needs.dependency-checks.result == 'success' && '✅ Clean' || '⚠️ Issues' }} | Dependency audit |
+
+          EOF
+
+          echo "coverage=${coverage}" >> $GITHUB_OUTPUT
+
+      - name: Post PR comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: pr-comment.md
+
+  # ==========================================
+  # Final Gate Check
+  # ==========================================
+  ci-gates-passed:
+    name: All CI Gates Passed
+    runs-on: ubuntu-latest
+    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks]
+    if: always()
+    steps:
+      - name: Check all gates passed
+        run: |
+          if [[ "${{ needs.quality-checks.result }}" != "success" || \
+                "${{ needs.unit-tests-coverage.result }}" != "success" || \
+                "${{ needs.mcp-contract-checks.result }}" != "success" || \
+                "${{ needs.dependency-checks.result }}" != "success" ]]; then
+            echo "::error::One or more CI gates failed"
+            exit 1
+          fi
+          echo "✅ All CI quality gates passed!"

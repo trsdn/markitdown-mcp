@@ -9,6 +9,11 @@ on:
     # Run security scans daily at 3 AM UTC
     - cron: '0 3 * * *'
 
+# Cancel duplicate runs
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ==========================================
   # Credential Scanning

@@ -21,6 +21,11 @@ on:
         - performance
         - security
 
+# Cancel duplicate runs
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PYTHON_MIN_VERSION: "3.10"
   PYTHON_MAX_VERSION: "3.13"

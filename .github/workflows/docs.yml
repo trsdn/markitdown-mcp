@@ -16,6 +16,11 @@ on:
 permissions:
   contents: read
 
+# Cancel duplicate runs
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ==========================================
   # Docstring Style and Coverage

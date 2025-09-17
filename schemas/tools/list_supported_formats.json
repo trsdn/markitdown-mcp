@@ -1,0 +1,10 @@
+{
+  "name": "list_supported_formats",
+  "description": "List all supported file formats for conversion",
+  "input_schema": {
+    "type": "object",
+    "properties": {}
+  },
+  "required_args": [],
+  "optional_args": []
+}
