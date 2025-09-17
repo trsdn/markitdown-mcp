@@ -26,10 +26,13 @@ jobs:
           # Get recent workflow runs
           echo "Fetching workflow status..."
 
+          # Generate timestamp
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+
           # Create status data
-          cat > status.json << 'EOF'
+          cat > status.json << EOF
           {
-            "updated": "$( date -u '+%Y-%m-%d %H:%M UTC' )",
+            "updated": "${TIMESTAMP}",
             "workflows": {}
           }
           EOF
@@ -52,7 +55,11 @@ jobs:
 
       - name: Generate dashboard HTML
         run: |
-          cat > dashboard.html << 'EOF'
+          # Generate timestamp for HTML
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+          REPO="${{ github.repository }}"
+
+          cat > dashboard.html << EOF
           <!DOCTYPE html>
           <html>
           <head>
@@ -182,9 +189,9 @@ jobs:
               </div>
 
               <div class="updated">
-                  Last updated: <span id="updated-time">$( date -u '+%Y-%m-%d %H:%M UTC' )</span>
+                  Last updated: <span id="updated-time">${TIMESTAMP}</span>
                   <br>
-                  <a href="https://github.com/${{ github.repository }}/actions">View all workflows →</a>
+                  <a href="https://github.com/${REPO}/actions">View all workflows →</a>
               </div>
 
               <script>
@@ -204,11 +211,13 @@ jobs:
       - name: Update README badges
         run: |
           # Create dynamic badges for README
-          cat > badges.md << 'EOF'
-          [![CI](https://github.com/${{ github.repository }}/workflows/CI%20Quality%20Gates/badge.svg)](https://github.com/${{ github.repository }}/actions/workflows/ci-gates.yml)
-          [![Tests](https://github.com/${{ github.repository }}/workflows/Test%20Suite/badge.svg)](https://github.com/${{ github.repository }}/actions/workflows/test.yml)
-          [![Security](https://github.com/${{ github.repository }}/workflows/Security/badge.svg)](https://github.com/${{ github.repository }}/actions/workflows/security.yml)
-          [![Documentation](https://github.com/${{ github.repository }}/workflows/Documentation%20CI/badge.svg)](https://github.com/${{ github.repository }}/actions/workflows/docs.yml)
+          REPO="${{ github.repository }}"
+
+          cat > badges.md << EOF
+          [![CI](https://github.com/${REPO}/workflows/CI%20Quality%20Gates/badge.svg)](https://github.com/${REPO}/actions/workflows/ci-gates.yml)
+          [![Tests](https://github.com/${REPO}/workflows/Test%20Suite/badge.svg)](https://github.com/${REPO}/actions/workflows/test.yml)
+          [![Security](https://github.com/${REPO}/workflows/Security/badge.svg)](https://github.com/${REPO}/actions/workflows/security.yml)
+          [![Documentation](https://github.com/${REPO}/workflows/Documentation%20CI/badge.svg)](https://github.com/${REPO}/actions/workflows/docs.yml)
           EOF
 
           echo "Generated badges for README"
