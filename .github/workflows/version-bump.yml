@@ -349,7 +349,10 @@ jobs:
   auto-tag-on-merge:
     name: Auto-tag on Merge
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'chore: bump version to v')
+    if: >
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, 'chore: bump version to v')
     steps:
       - uses: actions/checkout@v4
 
