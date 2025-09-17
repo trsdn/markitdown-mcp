@@ -39,7 +39,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-xdist pytest-timeout
+          pip install pytest pytest-xdist pytest-timeout pytest-asyncio
 
       - name: Run fast unit tests
         run: |
@@ -73,7 +73,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio pytest-timeout
 
       - name: Run MCP smoke tests
         run: |

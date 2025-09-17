@@ -97,17 +97,22 @@ jobs:
         run: |
           echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          coverage report --format=markdown >> $GITHUB_STEP_SUMMARY || echo "Coverage report not available" >> $GITHUB_STEP_SUMMARY
+          python -m coverage report >> $GITHUB_STEP_SUMMARY || echo "Coverage report not available" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Check coverage threshold
         run: |
           coverage_percent=$(python -c "import json; print(json.load(open('coverage.json'))['totals']['percent_covered'])")
           echo "Coverage: ${coverage_percent}%"
-          if (( $(echo "$coverage_percent < 80" | bc -l) )); then
-            echo "::error::Coverage ${coverage_percent}% is below 80% threshold"
-            exit 1
-          fi
+          # Use Python for floating point comparison instead of bc
+          python -c "
+          import sys
+          coverage = $coverage_percent
+          if coverage < 80:
+              print(f'Coverage {coverage}% is below 80% threshold')
+              sys.exit(1)
+          print(f'Coverage {coverage}% meets 80% threshold')
+          "
 
       - name: Upload test results
         if: always()

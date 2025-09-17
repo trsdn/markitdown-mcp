@@ -55,8 +55,8 @@ jobs:
         run: |
           python scripts/analyze-version.py \
             "${{ steps.latest-tag.outputs.latest-tag }}" \
-            "${{ inputs.force_bump }}" \
-            "${{ inputs.bump_type }}"
+            "${{ inputs.force_bump || 'false' }}" \
+            "${{ inputs.bump_type || 'auto' }}"
 
   create-version-bump:
     name: Create Version Bump PR
