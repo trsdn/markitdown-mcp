@@ -9,6 +9,7 @@ on:
       - '.github/workflows/fast-tests.yml'
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
