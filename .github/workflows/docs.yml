@@ -75,7 +75,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[docs]" || pip install -e .
-          pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme myst-parser sphinx-copybutton
+          pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme myst-parser sphinx-copybutton linkify-it-py
 
       - name: Build HTML documentation
         run: |

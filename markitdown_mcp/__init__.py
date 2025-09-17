@@ -1,5 +1,4 @@
-"""
-MarkItDown MCP Server - A Model Context Protocol server for document conversion.
+"""MarkItDown MCP Server - A Model Context Protocol server for document conversion.
 
 This package provides a Model Context Protocol (MCP) server that converts various
 file formats to Markdown using Microsoft's MarkItDown library.
