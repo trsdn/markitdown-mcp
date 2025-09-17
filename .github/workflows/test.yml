@@ -225,8 +225,8 @@ jobs:
         with:
           name: performance-results
           path: |
-          benchmark-results.json
-          benchmark-slow-results.json
+            benchmark-results.json
+            benchmark-slow-results.json
 
   # ==========================================
   # Comprehensive Tests
@@ -274,16 +274,16 @@ jobs:
           import json
           import os
 
-        # Create test summary
+          # Create test summary
           summary = {
-          'python_version': '${{ matrix.python-version }}',
-          'os': 'ubuntu-latest',
-          'comprehensive_run': True,
-          'timestamp': '$(date -Iseconds)'
+              'python_version': '${{ matrix.python-version }}',
+              'os': 'ubuntu-latest',
+              'comprehensive_run': True,
+              'timestamp': '$(date -Iseconds)'
           }
 
           with open('test-summary.json', 'w') as f:
-          json.dump(summary, f, indent=2)
+              json.dump(summary, f, indent=2)
           "
 
       - name: Upload comprehensive results
@@ -292,9 +292,9 @@ jobs:
         with:
           name: comprehensive-results
           path: |
-          coverage.xml
-          htmlcov/
-          test-summary.json
+            coverage.xml
+            htmlcov/
+            test-summary.json
 
   # ==========================================
   # Test Documentation
@@ -325,28 +325,28 @@ jobs:
           import os
           from pathlib import Path
 
-        # Check required documentation files exist
+          # Check required documentation files exist
           required_files = ['README.md', 'docs/development/TESTING_STRATEGY.md', 'AGENTS.md']
           missing_files = []
 
           for file in required_files:
-          if not Path(file).exists():
-          missing_files.append(file)
+              if not Path(file).exists():
+                  missing_files.append(file)
 
           if missing_files:
-          print(f'Missing documentation files: {missing_files}')
-          exit(1)
+              print(f'Missing documentation files: {missing_files}')
+              exit(1)
           else:
-          print('All required documentation files present')
+              print('All required documentation files present')
 
-        # Check README has essential sections
+          # Check README has essential sections
           readme_content = Path('README.md').read_text()
           required_sections = ['Installation', 'Usage', 'Features']
 
           for section in required_sections:
-          if section.lower() not in readme_content.lower():
-          print(f'README missing {section} section')
-          exit(1)
+              if section.lower() not in readme_content.lower():
+                  print(f'README missing {section} section')
+                  exit(1)
 
           print('Documentation validation passed')
           "
@@ -424,7 +424,7 @@ jobs:
 
       - name: Test MCP server executable
         run: |
-        # Quick test that the MCP server executable works
+          # Quick test that the MCP server executable works
           timeout 10s markitdown-mcp --help || echo "Help command completed"
 
       - name: Upload MCP test results
@@ -433,7 +433,7 @@ jobs:
         with:
           name: mcp-protocol-results
           path: |
-          pytest-results.xml
+            pytest-results.xml
           retention-days: 7
 
   # ==========================================
@@ -528,5 +528,5 @@ jobs:
         with:
           name: nightly-${{ matrix.test-category }}-results
           path: |
-          pytest-results.xml
+            pytest-results.xml
 
