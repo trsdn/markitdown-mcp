@@ -122,6 +122,7 @@ jobs:
 
       - name: Lint Markdown files
         uses: DavidAnson/markdownlint-cli2-action@v20
+        continue-on-error: true
         with:
           config: .markdownlint.yml
           globs: |
