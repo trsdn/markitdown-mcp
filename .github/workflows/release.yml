@@ -183,7 +183,7 @@ jobs:
 
       - name: Install build tools
         run: |
-          pip install build twine
+          pip install build twine tomli_w
 
       - name: Build package
         id: build

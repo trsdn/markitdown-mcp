@@ -206,7 +206,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install toml
+          pip install tomli_w
 
       - name: Create version bump branch
         run: |
