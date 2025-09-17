@@ -120,7 +120,6 @@ jobs:
           check_filenames: true
           ignore_words_list: "markitdown,mcp,jupyter,docx,pptx,xlsx,pdf,pypdf,onnx,griffe,pdoc,mkdocs,ba,te,fo,crate"
           skip: ".git,__pycache__,.pytest_cache,*.pyc,*.pyo,*.egg-info,*.pdf,*.docx,*.pptx,*.xlsx"
-          exclude_file: .codespellignore
 
       - name: Lint Markdown files
         uses: DavidAnson/markdownlint-cli2-action@v20
