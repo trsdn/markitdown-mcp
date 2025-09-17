@@ -17,17 +17,13 @@ seamless document-to-Markdown conversion capabilities using Microsoft's MarkItDo
    :hidden:
 
    README
-   installation
-   quickstart
 
 .. toctree::
    :maxdepth: 2
    :caption: User Guide
    :hidden:
 
-   guides/usage
    guides/KNOWN_ISSUES
-   guides/security
 
 .. toctree::
    :maxdepth: 2
@@ -35,9 +31,6 @@ seamless document-to-Markdown conversion capabilities using Microsoft's MarkItDo
    :hidden:
 
    api/index
-   api/server
-   api/tools
-   api/security
 
 .. toctree::
    :maxdepth: 2
@@ -49,26 +42,13 @@ seamless document-to-Markdown conversion capabilities using Microsoft's MarkItDo
    development/CI_CD_SYSTEM
    development/ci-cd-architecture
    development/ci-cd-quick-reference
-   development/architecture
-   AGENTS
-   CHANGELOG
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Additional Resources
-   :hidden:
-
-   examples/index
-   faq
-   troubleshooting
 
 Quick Links
 -----------
 
-* :doc:`Installation Guide <installation>` - Get started with markitdown-mcp
 * :doc:`API Reference <api/index>` - Complete API documentation
-* :doc:`Security Guide <guides/security>` - Security features and best practices
 * :doc:`Contributing <development/CONTRIBUTING>` - How to contribute to the project
+* :doc:`Known Issues <guides/KNOWN_ISSUES>` - Current limitations and workarounds
 
 Features
 --------
