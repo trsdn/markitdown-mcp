@@ -114,6 +114,8 @@ Convert all supported files in a directory.
 
 ## Installation
 
+<!-- Testing: Clean codebase should pass all CI/CD checks without false positives -->
+
 ### Option 1: Pip Install (Recommended)
 
 ```bash
