@@ -295,33 +295,37 @@ jobs:
       - name: Comment on PR
         if: steps.find-pr.outputs.pr-number
         run: |
+          cat > pr_comment.md << 'EOF'
+          ## 🔧 CI/CD Maintenance Review Required
+
+          **Security Status**: ${{ needs.validate-cicd-changes.outputs.security-status }}
+
+          **Changed Files**:
+          ${{ needs.validate-cicd-changes.outputs.changed-files }}
+
+          **Impact Summary**:
+          ${{ needs.validate-cicd-changes.outputs.impact-summary }}
+
+          **⚠️ Manual Review Required**
+          This PR contains CI/CD workflow changes that require careful manual review before merging.
+
+          **Review Checklist**:
+          - [ ] Review all workflow file changes
+          - [ ] Verify security implications
+          - [ ] Check for circular dependencies
+          - [ ] Ensure proper permissions
+          - [ ] Test rollback plan if needed
+
+          **✅ Automated Validation Passed**:
+          - YAML syntax validation
+          - GitHub Actions schema validation
+          - Security pattern scanning
+
+          **🚨 IMPORTANT**: Only merge this PR after thorough manual review of all CI/CD changes.
+          EOF
+
           gh api repos/${{ github.repository }}/issues/${{ steps.find-pr.outputs.pr-number }}/comments \
             --method POST \
-            --field body="## 🔧 CI/CD Maintenance Review Required
-
-**Security Status**: ${{ needs.validate-cicd-changes.outputs.security-status }}
-
-**Changed Files**:
-${{ needs.validate-cicd-changes.outputs.changed-files }}
-
-**Impact Summary**:
-${{ needs.validate-cicd-changes.outputs.impact-summary }}
-
-**⚠️ Manual Review Required**
-This PR contains CI/CD workflow changes that require careful manual review before merging.
-
-**Review Checklist**:
-- [ ] Review all workflow file changes
-- [ ] Verify security implications
-- [ ] Check for circular dependencies
-- [ ] Ensure proper permissions
-- [ ] Test rollback plan if needed
-
-**✅ Automated Validation Passed**:
-- YAML syntax validation
-- GitHub Actions schema validation
-- Security pattern scanning
-
-**🚨 IMPORTANT**: Only merge this PR after thorough manual review of all CI/CD changes."
+            --field body="$(cat pr_comment.md)"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
