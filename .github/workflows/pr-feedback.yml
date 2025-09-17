@@ -109,9 +109,16 @@ jobs:
           # 3. Type Issues
           # ===================
           echo "### 📝 Type Checking" >> pr-feedback.md
-          # First check if Python files have syntax errors
-          if python -m py_compile markitdown_mcp/*.py 2>/dev/null; then
-            # Only run mypy if files compile
+          # First check for Python syntax errors (exclude import errors which are separate issue)
+          syntax_errors=0
+          for file in markitdown_mcp/*.py; do
+            if ! python -c "import ast; ast.parse(open('$file').read())" 2>/dev/null; then
+              syntax_errors=$((syntax_errors + 1))
+            fi
+          done
+
+          if [ "$syntax_errors" -eq 0 ]; then
+            # Only run mypy if files have valid syntax
             if ! mypy markitdown_mcp --json-report mypy_report.json > mypy_output.txt 2>&1; then
             type_issues=$(jq '.reports | keys | length' mypy_report.json 2>/dev/null || echo "1")
             echo "❌ **Type checking issues found**" >> pr-feedback.md
@@ -129,9 +136,9 @@ jobs:
               echo "✅ **Type checking passed**" >> pr-feedback.md
             fi
           else
-            echo "❌ **Python syntax errors detected - cannot run type checking**" >> pr-feedback.md
-            type_issues=1
-            total_issues=$((total_issues + 1))
+            echo "❌ **$syntax_errors Python syntax error(s) detected - cannot run type checking**" >> pr-feedback.md
+            type_issues=$syntax_errors
+            total_issues=$((total_issues + syntax_errors))
           fi
           echo "" >> pr-feedback.md
 
@@ -177,35 +184,47 @@ jobs:
           # 5. Test Coverage Analysis
           # ===================
           echo "### 📊 Test Coverage Analysis" >> pr-feedback.md
-          if pytest tests/unit/ --cov=markitdown_mcp --cov-report=json --cov-report=term > coverage_output.txt 2>&1; then
-            coverage=$(jq -r '.totals.percent_covered' coverage.json)
-            coverage_int=${coverage%.*}
+          # Check if tests directory exists and has test files
+          if [ -d "tests/unit" ] && [ "$(find tests/unit -name '*.py' | wc -l)" -gt 0 ]; then
+            if pytest tests/unit/ --cov=markitdown_mcp --cov-report=json --cov-report=term > coverage_output.txt 2>&1; then
+              coverage=$(jq -r '.totals.percent_covered' coverage.json)
+              coverage_int=${coverage%.*}
 
-            if [ "$coverage_int" -lt 80 ]; then
-              echo "❌ **Coverage $coverage% is below 80% requirement**" >> pr-feedback.md
+              if [ "$coverage_int" -lt 80 ]; then
+                echo "❌ **Coverage $coverage% is below 80% requirement**" >> pr-feedback.md
+                echo "" >> pr-feedback.md
+                echo "<details><summary>Click to see coverage details</summary>" >> pr-feedback.md
+                echo "" >> pr-feedback.md
+                echo '```' >> pr-feedback.md
+                python -c "
+                import json
+                with open('coverage.json') as f:
+                    data = json.load(f)
+                files = data['files']
+                uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
+                if uncovered:
+                    print('Files below 80% coverage:')
+                    for file, pct in sorted(uncovered, key=lambda x: x[1]):
+                        print(f'{file}: {pct:.1f}%')
+                " >> pr-feedback.md
+                echo '```' >> pr-feedback.md
+                echo "</details>" >> pr-feedback.md
+                total_issues=$((total_issues + 1))
+              else
+                echo "✅ **Coverage $coverage% meets 80% requirement**" >> pr-feedback.md
+              fi
+            else
+              echo "⚠️ **Tests failed to run - checking error details**" >> pr-feedback.md
               echo "" >> pr-feedback.md
-              echo "<details><summary>Click to see coverage details</summary>" >> pr-feedback.md
+              echo "<details><summary>Click to see test failures</summary>" >> pr-feedback.md
               echo "" >> pr-feedback.md
               echo '```' >> pr-feedback.md
-              python -c "
-              import json
-              with open('coverage.json') as f:
-                  data = json.load(f)
-              files = data['files']
-              uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
-              if uncovered:
-                  print('Files below 80% coverage:')
-                  for file, pct in sorted(uncovered, key=lambda x: x[1]):
-                      print(f'{file}: {pct:.1f}%')
-              " >> pr-feedback.md
+              cat coverage_output.txt | head -20 >> pr-feedback.md
               echo '```' >> pr-feedback.md
               echo "</details>" >> pr-feedback.md
-              total_issues=$((total_issues + 1))
-            else
-              echo "✅ **Coverage $coverage% meets 80% requirement**" >> pr-feedback.md
             fi
           else
-            echo "⚠️ **Could not determine test coverage**" >> pr-feedback.md
+            echo "⚠️ **No unit tests found in tests/unit/ directory**" >> pr-feedback.md
           fi
           echo "" >> pr-feedback.md
 
