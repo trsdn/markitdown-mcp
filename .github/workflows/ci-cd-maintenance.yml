@@ -3,6 +3,9 @@ name: CI-CD Maintenance
 on:
   push:
     branches: [ci-cd-maintenance]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -11,6 +14,8 @@ jobs:
   validate-changes:
     name: Validate CI-CD Changes
     runs-on: ubuntu-latest
+    # Only run when the source branch is ci-cd-maintenance
+    if: github.head_ref == 'ci-cd-maintenance' || github.ref_name == 'ci-cd-maintenance'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

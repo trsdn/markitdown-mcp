@@ -3,6 +3,7 @@ name: PR Summary & Status
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches-ignore: [ci-cd-maintenance]
   workflow_run:
     workflows: ["CI Quality Gates", "Test Suite", "Security", "Documentation CI"]
     types: [completed]
