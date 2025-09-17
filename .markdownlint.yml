@@ -136,9 +136,6 @@ MD027: true
 # No blank lines inside blockquotes
 MD028: false
 
-# Ordered list prefix
-MD029:
-  style: one_or_ordered
 
 # Definition terms must be unique
 MD052: true
