@@ -1,4 +1,4 @@
-name: CI/CD Maintenance Test
+name: CI-CD Maintenance Test
 
 on:
   push:

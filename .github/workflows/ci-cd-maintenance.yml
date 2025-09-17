@@ -1,4 +1,4 @@
-name: CI/CD Maintenance
+name: CI-CD Maintenance
 
 on:
   push:
