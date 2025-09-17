@@ -166,7 +166,7 @@ def assert_valid_json_rpc_response(response_text: str) -> dict[str, Any]:
         response = json.loads(response_text)
     except json.JSONDecodeError as e:
         pytest.fail(f"Response is not valid JSON: {e}\nResponse: {response_text}")
-        return  # Help static analysis understand pytest.fail never returns
+        return {}  # Never reached, but satisfies static analysis and type hints
 
     assert "jsonrpc" in response, "Response must have jsonrpc field"
     assert response["jsonrpc"] == "2.0", "Response must be JSON-RPC 2.0"
