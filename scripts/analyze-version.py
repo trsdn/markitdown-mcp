@@ -11,10 +11,23 @@ from pathlib import Path
 
 
 def main():
+    # Check for help
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h", "help"]:
+        print("Usage: analyze-version.py [latest_tag] [force_bump] [override_type]")
+        print("  latest_tag: e.g., 'v1.0.0' (default: v0.0.0)")
+        print("  force_bump: 'true' or 'false' (default: false)")
+        print("  override_type: 'auto', 'patch', 'minor', 'major' (default: auto)")
+        sys.exit(0)
+
     # Get parameters from environment or command line
     latest_tag = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("LATEST_TAG", "v0.0.0")
     force_bump = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("FORCE_BUMP", "false")
     override_type = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("OVERRIDE_TYPE", "auto")
+
+    # Validate latest_tag format
+    if not latest_tag.startswith("v") or latest_tag.count(".") != 2:
+        print(f"Warning: Invalid tag format '{latest_tag}', using v0.0.0")
+        latest_tag = "v0.0.0"
 
     # Get commits since last tag
     commit_range = "HEAD" if latest_tag == "v0.0.0" else f"{latest_tag}..HEAD"
@@ -91,19 +104,24 @@ def main():
         new_version = "0.1.0"
     else:
         parts = current_version.split(".")
-        major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+        try:
+            major, minor, patch = int(parts[0]), int(parts[1]), int(parts[2])
+        except (ValueError, IndexError):
+            print(f"Error: Cannot parse version '{current_version}', using 0.1.0")
+            new_version = "0.1.0"
+            bump_type = "none"
+        else:
+            if bump_type == "major":
+                major += 1
+                minor = 0
+                patch = 0
+            elif bump_type == "minor":
+                minor += 1
+                patch = 0
+            elif bump_type == "patch":
+                patch += 1
 
-        if bump_type == "major":
-            major += 1
-            minor = 0
-            patch = 0
-        elif bump_type == "minor":
-            minor += 1
-            patch = 0
-        elif bump_type == "patch":
-            patch += 1
-
-        new_version = f"{major}.{minor}.{patch}"
+            new_version = f"{major}.{minor}.{patch}"
 
     # Generate changelog
     changelog_entries = []
