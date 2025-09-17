@@ -53,9 +53,6 @@ jobs:
         run: |
           echo "=== Docstring Coverage Report ==="
           interrogate -v markitdown_mcp --fail-under 80 --exclude __pycache__
-          echo ""
-          echo "=== Detailed Coverage ==="
-          docstr-coverage markitdown_mcp --skip-file-doc --skip-init --percentage-only
 
   # ==========================================
   # Build Sphinx Documentation
@@ -109,7 +106,7 @@ jobs:
             --no-progress
             --timeout 20
             --max-redirects 5
-            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply|mailto:"
+            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply|mailto:|claude.ai"
             --exclude-path ".git|__pycache__|.pytest_cache"
             "**/*.md"
             "docs/**/*.rst"
