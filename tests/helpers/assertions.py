@@ -161,7 +161,10 @@ def assert_file_converted_to_markdown(
 
 
 def assert_valid_json_rpc_response(response_text: str) -> dict[str, Any]:
-    """Assert that response text is valid JSON-RPC and return parsed response."""
+    """Assert that response text is valid JSON-RPC and return parsed response.
+
+    Fixed static analysis false positive by adding return after pytest.fail().
+    """
     try:
         response = json.loads(response_text)
     except json.JSONDecodeError as e:
