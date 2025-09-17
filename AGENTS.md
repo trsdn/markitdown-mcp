@@ -506,13 +506,13 @@ def detect_emergency_release(commits):
     return False, "No critical security issues detected"
 ```
 
-## 🔧 CI-CD Maintenance Process
+## 🔧 CI/CD Maintenance Process
 
-### For AI Agents Working with CI-CD
+### For AI Agents Working with CI/CD
 
-**CRITICAL**: CI-CD workflow changes require special handling to avoid infinite loops where workflows validate themselves.
+**CRITICAL**: CI/CD workflow changes require special handling to avoid infinite loops where workflows validate themselves.
 
-### When to Use CI-CD Maintenance Process
+### When to Use CI/CD Maintenance Process
 
 Use the `ci-cd-maintenance` branch and process when making changes to:
 - GitHub Actions workflows (`.github/workflows/*.yml`)
@@ -520,7 +520,7 @@ Use the `ci-cd-maintenance` branch and process when making changes to:
 - Infrastructure-as-code files
 - Security-sensitive automation
 
-### CI-CD Maintenance Workflow
+### CI/CD Maintenance Workflow
 
 ```python
 async def update_cicd_infrastructure(changes_description):
@@ -548,7 +548,7 @@ async def update_cicd_infrastructure(changes_description):
 def generate_merge_instructions(validation_result):
     """Generate clear instructions for manual merge."""
     return f"""
-🔧 **CI-CD Maintenance Ready for Review**
+🔧 **CI/CD Maintenance Ready for Review**
 
 **Validation Status**: {validation_result.status}
 **Security Check**: {validation_result.security_status}
@@ -575,9 +575,9 @@ git push origin main
 """
 ```
 
-### Security Considerations for CI-CD Changes
+### Security Considerations for CI/CD Changes
 
-AI agents must be extra careful with CI-CD changes:
+AI agents must be extra careful with CI/CD changes:
 
 ```python
 def validate_cicd_security(workflow_content):
@@ -620,7 +620,7 @@ def safe_workflow_update(file_path, new_content):
     return f"Safely updated {file_path}"
 ```
 
-### Common CI-CD Patterns for AI Agents
+### Common CI/CD Patterns for AI Agents
 
 **Adding new workflow**:
 ```python
@@ -660,7 +660,7 @@ def update_workflow_safely(file_path, updates):
     return safe_workflow_update(file_path, yaml_content)
 ```
 
-### Emergency CI-CD Fixes
+### Emergency CI/CD Fixes
 
 For broken CI that blocks development:
 
@@ -671,12 +671,12 @@ For broken CI that blocks development:
 
 ```python
 def emergency_cicd_fix(issue_description, fix_changes):
-    """Handle emergency CI-CD fixes."""
+    """Handle emergency CI/CD fixes."""
 
     branch_name = f"ci-cd-hotfix-{issue_description.replace(' ', '-')}"
 
     return f"""
-🚨 **EMERGENCY CI-CD FIX REQUIRED**
+🚨 **EMERGENCY CI/CD FIX REQUIRED**
 
 **Issue**: {issue_description}
 **Branch**: {branch_name}
@@ -693,7 +693,7 @@ Please review and merge immediately.
 ### Best Practices for AI Agents
 
 1. **Always use ci-cd-maintenance branch** for workflow changes
-2. **Never auto-merge CI-CD changes** - always require manual review
+2. **Never auto-merge CI/CD changes** - always require manual review
 3. **Validate thoroughly** before pushing changes
 4. **Provide clear review instructions** for humans
 5. **Plan rollback strategy** before making changes

@@ -1,6 +1,6 @@
-# CI-CD Review Checklist
+# CI/CD Review Checklist
 
-## 🔧 CI-CD Maintenance Review Guide
+## 🔧 CI/CD Maintenance Review Guide
 
 This checklist ensures safe and thorough review of CI/CD workflow changes before manual merge.
 
@@ -180,8 +180,8 @@ Merge Authorization: APPROVED
 
 ## 📚 Additional Resources
 
-- [CI-CD Maintenance Workflow](../../.github/workflows/ci-cd-maintenance.yml)
-- [AGENTS.md CI-CD Section](../../AGENTS.md#-ci-cd-maintenance-process)
+- [CI/CD Maintenance Workflow](../../.github/workflows/ci-cd-maintenance.yml)
+- [AGENTS.md CI/CD Section](../../AGENTS.md#-cicd-maintenance-process)
 - [Security Best Practices](../guides/security.md)
 - [GitHub Actions Security Hardening](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
 
