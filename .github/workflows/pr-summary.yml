@@ -48,36 +48,42 @@ jobs:
 
       - name: Get latest workflow runs for this PR
         id: workflows
+        continue-on-error: true
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
           if [ -z "$PR_NUMBER" ]; then
             echo "No PR number found, skipping"
+            echo "ci_gates=pending" >> $GITHUB_OUTPUT
+            echo "test_suite=pending" >> $GITHUB_OUTPUT
+            echo "security=pending" >> $GITHUB_OUTPUT
+            echo "docs=pending" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # Get the latest runs for each workflow
+          # Get the latest runs for each workflow with proper error handling
           echo "Checking workflows for PR #${PR_NUMBER}..."
 
           # CI Quality Gates
           CI_GATES=$(gh api repos/${{ github.repository }}/actions/workflows/ci-gates.yml/runs \
             --jq ".workflow_runs[] | select(.pull_requests[]?.number == ${PR_NUMBER}) | .conclusion" \
-            | head -1 || echo "")
+            | head -1 2>/dev/null || echo "pending")
 
           # Test Suite
           TEST_SUITE=$(gh api repos/${{ github.repository }}/actions/workflows/test.yml/runs \
             --jq ".workflow_runs[] | select(.pull_requests[]?.number == ${PR_NUMBER}) | .conclusion" \
-            | head -1 || echo "")
+            | head -1 2>/dev/null || echo "pending")
 
           # Security
           SECURITY=$(gh api repos/${{ github.repository }}/actions/workflows/security.yml/runs \
             --jq ".workflow_runs[] | select(.pull_requests[]?.number == ${PR_NUMBER}) | .conclusion" \
-            | head -1 || echo "")
+            | head -1 2>/dev/null || echo "pending")
 
           # Documentation
           DOCS=$(gh api repos/${{ github.repository }}/actions/workflows/docs.yml/runs \
             --jq ".workflow_runs[] | select(.pull_requests[]?.number == ${PR_NUMBER}) | .conclusion" \
-            | head -1 || echo "")
+            | head -1 2>/dev/null || echo "pending")
 
+          # Ensure we have valid values (not empty strings)
           echo "ci_gates=${CI_GATES:-pending}" >> $GITHUB_OUTPUT
           echo "test_suite=${TEST_SUITE:-pending}" >> $GITHUB_OUTPUT
           echo "security=${SECURITY:-pending}" >> $GITHUB_OUTPUT
@@ -98,28 +104,36 @@ jobs:
 
       - name: Extract coverage
         id: coverage
+        continue-on-error: true
         run: |
           coverage="N/A"
           if [ -f test-results/coverage.json ]; then
             coverage=$(python -c "
             import json
+            import sys
             try:
                 with open('test-results/coverage.json') as f:
                     data = json.load(f)
-                print(f\"{data['totals']['percent_covered']:.1f}%\")
-            except:
+                if 'totals' in data and 'percent_covered' in data['totals']:
+                    print(f\"{data['totals']['percent_covered']:.1f}%\")
+                else:
+                    print('N/A')
+            except Exception as e:
                 print('N/A')
-            ")
+                print(f'Coverage parsing error: {e}', file=sys.stderr)
+            " 2>/dev/null || echo "N/A")
           fi
           echo "value=${coverage}" >> $GITHUB_OUTPUT
 
       - name: Analyze test results
         id: tests
+        continue-on-error: true
         run: |
           if [ -f test-results/junit.xml ]; then
             # Parse JUnit XML for test summary
             summary=$(python -c "
             import xml.etree.ElementTree as ET
+            import sys
             try:
                 tree = ET.parse('test-results/junit.xml')
                 root = tree.getroot()
@@ -128,9 +142,10 @@ jobs:
                 errors = root.get('errors', '0')
                 skipped = root.get('skipped', '0')
                 print(f'{tests} tests, {failures} failures, {errors} errors, {skipped} skipped')
-            except:
+            except Exception as e:
                 print('Test results unavailable')
-            ")
+                print(f'JUnit parsing error: {e}', file=sys.stderr)
+            " 2>/dev/null || echo "Test results unavailable")
           else
             summary="Test results pending"
           fi
@@ -149,12 +164,18 @@ jobs:
         run: |
           PR_NUMBER="${{ needs.collect-results.outputs.pr-number }}"
 
-          # Get check runs for this PR
-          CHECK_RUNS=$(gh api repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}/check-runs \
+          # Get check runs for this PR and save to file instead of output variable
+          gh api repos/${{ github.repository }}/commits/${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha }}/check-runs \
             --jq '.check_runs[] | select(.app.slug == "github-actions") | {name: .name, conclusion: .conclusion, status: .status}' \
-            | jq -s .)
+            | jq -s . > check_runs.json || echo "[]" > check_runs.json
 
-          echo "check_runs=${CHECK_RUNS}" >> $GITHUB_OUTPUT
+          # Validate the JSON file was created successfully
+          if [ -f check_runs.json ] && jq empty check_runs.json 2>/dev/null; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "[]" > check_runs.json
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -172,10 +193,14 @@ jobs:
             esac
           }
 
-          # Parse check runs and create summary
-          CHECK_RUNS='${{ steps.status.outputs.check_runs }}'
-
+          # Parse check runs from file and create summary
           echo "Creating status summary..."
+
+          if [ ! -f check_runs.json ]; then
+            echo "⚪ No status data available" > status_summary.txt
+            exit 0
+          fi
+
           python -c "
           import json
           import sys
@@ -192,29 +217,42 @@ jobs:
               }.get(status, '⚪')
 
           try:
-              runs = json.loads('${CHECK_RUNS}')
+              with open('check_runs.json', 'r') as f:
+                  runs = json.load(f)
+
+              if not runs:
+                  print('⚪ No workflow status available')
+                  sys.exit(0)
+
               summary = []
 
               # Group by workflow
               workflows = {}
               for run in runs:
-                  name = run['name']
-                  if 'CI Quality Gates' in name or 'quality-checks' in name:
-                      workflows['Quality'] = run['conclusion']
-                  elif 'Test' in name:
-                      workflows['Tests'] = run['conclusion']
-                  elif 'Security' in name:
-                      workflows['Security'] = run['conclusion']
-                  elif 'Documentation' in name or 'docs' in name:
-                      workflows['Docs'] = run['conclusion']
+                  name = run.get('name', '')
+                  conclusion = run.get('conclusion', 'pending')
 
+                  if 'CI Quality Gates' in name or 'Code Quality Checks' in name:
+                      workflows['Quality'] = conclusion
+                  elif 'Test' in name and 'Python' in name:
+                      workflows['Tests'] = conclusion
+                  elif 'Security' in name or 'CodeQL' in name:
+                      workflows['Security'] = conclusion
+                  elif 'Documentation' in name or 'Docstring' in name:
+                      workflows['Docs'] = conclusion
+
+              # Add status for each workflow category
               for workflow, status in workflows.items():
                   emoji = status_emoji(status)
                   summary.append(f'{emoji} {workflow}: {status or \"pending\"}')
 
-              print('\\n'.join(summary))
+              if not summary:
+                  print('🔄 Workflows in progress...')
+              else:
+                  print('\\n'.join(summary))
+
           except Exception as e:
-              print('Status check failed:', e)
+              print(f'⚠️ Status parsing error: {str(e)}')
           " > status_summary.txt
 
       - name: Performance regression check
@@ -231,7 +269,16 @@ jobs:
           COVERAGE="${{ needs.collect-results.outputs.coverage }}"
           TESTS="${{ needs.collect-results.outputs.test-results }}"
 
-          cat > pr-comment.md << 'EOF'
+          # Create fallback status if file doesn't exist
+          if [ ! -f status_summary.txt ]; then
+            echo "🔄 Workflow status loading..." > status_summary.txt
+          fi
+
+          # Ensure we have values
+          COVERAGE="${COVERAGE:-N/A}"
+          TESTS="${TESTS:-Test results pending}"
+
+          cat > pr-comment.md << EOF
           ## 🔍 PR Quality Summary
 
           ### CI Status
@@ -242,19 +289,19 @@ jobs:
           |--------|-------|-------|
           | 📊 Coverage | ${COVERAGE} | - |
           | 🧪 Tests | ${TESTS} | - |
-          | ⏱️ Performance | ${{ steps.performance.outputs.performance_delta }} | - |
+          | ⏱️ Performance | ${{ steps.performance.outputs.performance_delta || 'No performance data' }} | - |
 
           ### Quality Checks
           - **Format & Lint**: Ruff formatting and linting
           - **Type Safety**: MyPy strict type checking
           - **Security**: Bandit, Safety, GitLeaks scanning
           - **MCP Protocol**: Tool schema validation
-          - **Documentation**: Docstring coverage (100%)
+          - **Documentation**: Docstring coverage (80%+)
 
           ### MCP Tools
-          - `convert_file` - Convert individual files to Markdown
-          - `convert_directory` - Batch convert directories
-          - `list_supported_formats` - Query supported file types
+          - \`convert_file\` - Convert individual files to Markdown
+          - \`convert_directory\` - Batch convert directories
+          - \`list_supported_formats\` - Query supported file types
 
           ---
           <sub>🤖 Auto-generated by CI • Last updated: $(date -u '+%Y-%m-%d %H:%M UTC')</sub>
@@ -262,6 +309,7 @@ jobs:
 
       - name: Post summary comment
         uses: marocchino/sticky-pull-request-comment@v2
+        continue-on-error: true
         with:
           number: ${{ needs.collect-results.outputs.pr-number }}
           recreate: true
