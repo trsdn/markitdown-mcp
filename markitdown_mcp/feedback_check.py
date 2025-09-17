@@ -1,4 +1,7 @@
-"""Module to verify PR feedback systems."""
+"""Module to verify PR feedback systems.
+
+This file contains intentional issues to test the PR feedback workflow.
+"""
 
 import os
 from typing import List
