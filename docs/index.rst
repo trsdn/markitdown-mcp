@@ -46,6 +46,9 @@ seamless document-to-Markdown conversion capabilities using Microsoft's MarkItDo
 
    development/CONTRIBUTING
    development/TESTING_STRATEGY
+   development/CI_CD_SYSTEM
+   development/ci-cd-architecture
+   development/ci-cd-quick-reference
    development/architecture
    AGENTS
    CHANGELOG
