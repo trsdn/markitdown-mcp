@@ -1291,6 +1291,7 @@ def main() -> None:
     """Main entry point for console script."""
 
     async def run_server() -> None:
+        """Run the MCP server asynchronously."""
         server = MarkItDownMCPServer()
         await server.run()
 

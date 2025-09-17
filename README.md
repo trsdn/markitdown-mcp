@@ -416,5 +416,5 @@ MIT License - see LICENSE file for details.
 ## 🔗 Related
 
 - [Model Context Protocol](https://modelcontextprotocol.io)
-- [Claude Desktop](https://claude.ai/desktop)  
+- [Claude Desktop](https://claude.ai/)  
 - [Microsoft MarkItDown](https://github.com/microsoft/markitdown)# Test workflow fixes
