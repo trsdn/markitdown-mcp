@@ -197,16 +197,16 @@ jobs:
                 echo "" >> pr-feedback.md
                 echo '```' >> pr-feedback.md
                 python -c "
-                import json
-                with open('coverage.json') as f:
-                    data = json.load(f)
-                files = data['files']
-                uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
-                if uncovered:
-                    print('Files below 80% coverage:')
-                    for file, pct in sorted(uncovered, key=lambda x: x[1]):
-                        print(f'{file}: {pct:.1f}%')
-                " >> pr-feedback.md
+import json
+with open('coverage.json') as f:
+    data = json.load(f)
+files = data['files']
+uncovered = [(f, files[f]['summary']['percent_covered']) for f in files if files[f]['summary']['percent_covered'] < 80]
+if uncovered:
+    print('Files below 80% coverage:')
+    for file, pct in sorted(uncovered, key=lambda x: x[1]):
+        print(f'{file}: {pct:.1f}%')
+" >> pr-feedback.md
                 echo '```' >> pr-feedback.md
                 echo "</details>" >> pr-feedback.md
                 total_issues=$((total_issues + 1))
