@@ -2,7 +2,7 @@ name: CI/CD Maintenance
 
 on:
   push:
-    branches: [ ci-cd-maintenance ]
+    branches: [ci-cd-maintenance]
   workflow_dispatch:
     inputs:
       dry_run:
