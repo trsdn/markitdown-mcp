@@ -510,84 +510,95 @@ def detect_emergency_release(commits):
 
 ### For AI Agents Working with CI/CD
 
-**CRITICAL**: CI/CD workflow changes require special handling to avoid infinite loops where workflows validate themselves.
+We use **branch-based filtering** with the `ci-cd-maintenance` branch for safe CI/CD maintenance.
 
-### Branch Strategy for Different Types of Changes
+### Branch-Based CI/CD Management
+
+Our workflows use `branches-ignore: [ci-cd-maintenance]` to provide clean separation:
+
+**Workflow Behavior:**
+- **Feature branches → main**: All workflows run normally
+- **Direct pushes to main**: All workflows run normally
+- **ci-cd-maintenance → main**: Most workflows skipped, only validation runs
+- **Clean separation**: CI/CD changes don't interfere with development
+
+### Smart Branch Filtering
+
+✅ **Feature branch PRs** → All workflows run for full validation
+✅ **Main branch pushes** → All workflows run
+⏭️ **CI/CD maintenance PRs** → Most workflows skipped for efficiency
+✅ **Dedicated validation** → CI/CD maintenance workflow always runs
+
+### When to Use Different Branches
+
+**Use normal feature/fix branches for:**
+- Simple CI/CD tweaks (timeouts, versions, typos)
+- Application code changes
+- Test files and documentation
+- Most workflow modifications
+- Any change that should trigger full CI validation
 
 **Use `ci-cd-maintenance` branch for:**
-- GitHub Actions workflows (`.github/workflows/*.yml`)
-- CI/CD configuration files
-- Infrastructure-as-code files
-- Security-sensitive automation
-- Scripts used by workflows (e.g., `scripts/analyze-version.py`)
+- Complex CI/CD changes requiring isolation
+- Major workflow restructuring
+- Infrastructure-as-code changes
+- Changes that would trigger too many workflows unnecessarily
 
-**Use feature/fix branches for:**
-- Application code changes (e.g., `markitdown_mcp/server.py`)
-- Test files (e.g., `tests/unit/*.py`)
-- Documentation updates
-- Configuration files that don't affect CI/CD
-
-**Rule of thumb**: If the change affects how CI/CD workflows run or could create validation loops, use `ci-cd-maintenance`. If it's regular code that gets validated by CI/CD, use a normal feature branch.
-
-### When to Use CI/CD Maintenance Process
-
-Use the `ci-cd-maintenance` branch and process when making changes to:
-- GitHub Actions workflows (`.github/workflows/*.yml`)
-- CI/CD configuration files
-- Infrastructure-as-code files
-- Security-sensitive automation
-- Version analysis scripts (`scripts/analyze-version.py`)
-- Workflow dependencies and tools
-
-### CI/CD Maintenance Workflow
+### Modern CI/CD Workflow (Recommended)
 
 ```python
 async def update_cicd_infrastructure(changes_description, is_complex=False):
-    """AI agent workflow for CI/CD changes."""
+    """AI agent workflow for CI/CD changes using branch-based filtering."""
 
-    # 1. Create ci-cd-maintenance branch
-    await run_command("git checkout -b ci-cd-maintenance")
+    if is_complex:
+        # 1. For complex changes, use ci-cd-maintenance branch
+        await run_command("git checkout -b ci-cd-maintenance")
+        branch_name = "ci-cd-maintenance"
+    else:
+        # 2. For simple changes, use feature branch (triggers full CI)
+        branch_name = f"fix/ci-{generate_branch_suffix()}"
+        await run_command(f"git checkout -b {branch_name}")
 
-    # 2. Make CI/CD changes
+    # 3. Make CI/CD changes
     # ... implement changes ...
 
-    # 3. Commit changes with clear description
+    # 4. Commit changes with clear description
     commit_message = f"ci: {changes_description}"
     if is_complex:
-        commit_message += "\n\nRequires manual review and merge"
+        commit_message += "\n\nUsing ci-cd-maintenance branch for isolation"
     await run_command(f"git commit -m '{commit_message}'")
 
-    # 4. Push to trigger CI/CD maintenance workflow
-    await run_command("git push origin ci-cd-maintenance")
+    # 5. Push branch
+    await run_command(f"git push origin {branch_name}")
 
-    # 5. Create PR for review
+    # 6. Create PR - branch filtering determines workflow execution
     if is_complex:
-        return create_manual_review_pr(changes_description)
+        return create_maintenance_pr(changes_description)
     else:
         return create_standard_cicd_pr(changes_description)
 
 def create_standard_cicd_pr(changes_description):
-    """Create standard CI/CD maintenance PR."""
+    """Create standard CI/CD maintenance PR with full CI validation."""
     return f"""
 🔧 **CI/CD Maintenance: {changes_description}**
 
-**Type**: Standard workflow maintenance
-**Auto-merge**: Safe for automatic merge after CI validation
+**Type**: Standard workflow maintenance (feature branch)
+**Validation**: Full CI suite runs for comprehensive testing
 
 **Changes**:
 - {changes_description}
 
-**Validation**: All CI checks must pass before merge
+**Testing**: All workflows run to validate changes don't break CI
 **Rollback**: Standard git revert if issues found
 """
 
-def create_manual_review_pr(changes_description):
-    """Create complex CI/CD maintenance PR requiring manual review."""
+def create_maintenance_pr(changes_description):
+    """Create CI/CD maintenance PR using ci-cd-maintenance branch."""
     return f"""
 🔧 **CI/CD Maintenance: {changes_description}**
 
-**Type**: Complex workflow changes requiring manual review
-**Auto-merge**: DISABLED - Manual review required
+**Type**: Complex workflow changes (ci-cd-maintenance branch)
+**Validation**: Only CI/CD maintenance workflow runs for efficiency
 
 **Manual Review Required**:
 1. Review workflow changes carefully
@@ -737,10 +748,10 @@ Please review and merge immediately.
 
 ### Best Practices for AI Agents
 
-1. **Always use ci-cd-maintenance branch** for workflow changes
-2. **Assess complexity** - standard changes can auto-merge, complex ones need manual review
+1. **Choose the right branch** - feature branches for simple changes, ci-cd-maintenance for complex
+2. **Assess complexity** - simple changes get full CI validation, complex ones get isolation
 3. **Validate thoroughly** before pushing changes
-4. **Provide clear categorization** (standard vs. complex) in PRs
+4. **Provide clear categorization** (standard vs. maintenance) in PRs
 5. **Plan rollback strategy** before making changes
 6. **Monitor CI health** after changes are merged
 

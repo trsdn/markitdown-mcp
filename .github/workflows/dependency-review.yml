@@ -2,18 +2,7 @@ name: Dependency Review
 
 on:
   pull_request:
-    paths-ignore:
-      - '.github/workflows/**'
-      - '.github/actions/**'
-      - 'scripts/analyze-version.py'
-      - 'scripts/coverage-diff.py'
-      - 'scripts/generate-schemas.py'
-      - 'scripts/ci-*.py'
-      - '.github/dependabot.yml'
-      - '.github/CODEOWNERS'
-      - '.github/pull_request_template.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/ci-cd-paths.yml'
+    branches-ignore: [ci-cd-maintenance]
   # Also run on Dependabot PRs
   pull_request_target:
     branches-ignore: [ci-cd-maintenance]

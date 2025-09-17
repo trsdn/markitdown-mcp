@@ -1,32 +1,9 @@
 name: Documentation CI
 on:
   pull_request:
-    paths-ignore:
-      - '.github/workflows/**'
-      - '.github/actions/**'
-      - 'scripts/analyze-version.py'
-      - 'scripts/coverage-diff.py'
-      - 'scripts/generate-schemas.py'
-      - 'scripts/ci-*.py'
-      - '.github/dependabot.yml'
-      - '.github/CODEOWNERS'
-      - '.github/pull_request_template.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/ci-cd-paths.yml'
+    branches-ignore: [ci-cd-maintenance]
   push:
     branches: [main]
-    paths-ignore:
-      - '.github/workflows/**'
-      - '.github/actions/**'
-      - 'scripts/analyze-version.py'
-      - 'scripts/coverage-diff.py'
-      - 'scripts/generate-schemas.py'
-      - 'scripts/ci-*.py'
-      - '.github/dependabot.yml'
-      - '.github/CODEOWNERS'
-      - '.github/pull_request_template.md'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/ci-cd-paths.yml'
   schedule:
     - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC for link rot detection
 

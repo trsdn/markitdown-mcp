@@ -23,7 +23,7 @@ This document provides a comprehensive overview of the CI/CD system for the Mark
 
 ## System Overview
 
-The CI/CD system is built on GitHub Actions and consists of 14 specialized workflows that handle different aspects of the development lifecycle:
+The CI/CD system is built on GitHub Actions and consists of 17 specialized workflows that handle different aspects of the development lifecycle:
 
 ```mermaid
 graph TB
@@ -440,6 +440,39 @@ sequenceDiagram
 3. **Secure**: Validate all inputs and outputs
 4. **Monitored**: Track metrics and failures
 
+## Branch-Based CI/CD Management
+
+### Overview
+
+We use **branch-based filtering** to manage CI/CD workflow execution efficiently:
+
+- **Regular development**: All workflows run normally on feature branches and main
+- **CI/CD maintenance**: Use the `ci-cd-maintenance` branch for workflow changes
+- **Smart filtering**: Most workflows ignore PRs from `ci-cd-maintenance` branch
+
+### Workflow Behavior
+
+✅ **Feature branch PRs** → All workflows run normally
+✅ **Main branch pushes** → All workflows run
+✅ **CI/CD maintenance PRs** → Only essential workflows run
+✅ **Clean separation** → Prevents CI/CD changes from blocking development
+
+### CI/CD Maintenance Workflow
+
+The **CI/CD Maintenance** (`ci-cd-maintenance.yml`) workflow provides dedicated validation for workflow changes:
+
+**Features:**
+- YAML syntax validation for all workflow files
+- Security scanning for dangerous patterns
+- Workflow linting and best practices
+- Comprehensive testing of CI/CD changes
+
+**Usage:**
+1. Create changes on `ci-cd-maintenance` branch
+2. Open PR to main (triggers validation)
+3. Merge after review and validation
+4. CI/CD changes take effect immediately
+
 ## Workflow Dependencies
 
 ```mermaid
@@ -455,6 +488,7 @@ graph LR
 
     I[docs] --> J[docs-deploy]
     K[dependabot] --> L[auto-merge]
+    M[ci-cd-maintenance] --> N[workflow-validation]
 ```
 
 This CI/CD system ensures high-quality, secure, and reliable releases while maintaining developer productivity and code quality standards.
