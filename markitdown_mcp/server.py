@@ -708,6 +708,7 @@ class MarkItDownMCPServer:
     """
 
     def __init__(self) -> None:
+        """Initialize the MarkItDown MCP server."""
         self.markitdown = MarkItDown()
         self.supported_extensions = {
             # Office documents

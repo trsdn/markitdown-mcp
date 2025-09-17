@@ -120,7 +120,6 @@ copybutton_line_continuation_character = "\\"
 # Intersphinx mapping (link to other projects)
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
-    "markitdown": ("https://microsoft.github.io/markitdown/", None),
 }
 
 # TODO extension settings

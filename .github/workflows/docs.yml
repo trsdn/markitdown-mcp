@@ -109,8 +109,7 @@ jobs:
             --no-progress
             --timeout 20
             --max-redirects 5
-            --exclude-mail
-            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply"
+            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply|mailto:"
             --exclude-path ".git|__pycache__|.pytest_cache"
             "**/*.md"
             "docs/**/*.rst"
