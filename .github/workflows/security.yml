@@ -23,24 +23,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Fetch full history for comprehensive scanning
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for comprehensive scanning
 
-    - name: Run GitLeaks
-      uses: gitleaks/gitleaks-action@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional: for GitLeaks+ features
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: for GitLeaks+ features
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
-    - name: Upload GitLeaks report
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: gitleaks-report
-        path: results.sarif
-        retention-days: 5
+      - name: Upload GitLeaks report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: gitleaks-report
+          path: results.sarif
+          retention-days: 5
 
   # ==========================================
   # Python Security Scanning
@@ -50,41 +51,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install security tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit[toml] safety
-        pip install -e .
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit[toml] safety
+          pip install -e .
 
-    - name: Run Bandit security linter
-      run: |
-        echo "Running Bandit security analysis..."
-        bandit -r markitdown_mcp/ -f json -o bandit-report.json || echo "Bandit found security issues"
-        bandit -r markitdown_mcp/ -f txt || echo "Bandit text output completed"
+      - name: Run Bandit security linter
+        run: |
+          echo "Running Bandit security analysis..."
+          bandit -r markitdown_mcp/ -f json -o bandit-report.json || \
+            echo "Bandit found security issues"
+          bandit -r markitdown_mcp/ -f txt || echo "Bandit text output completed"
 
-    - name: Run Safety dependency check
-      run: |
-        echo "Running Safety dependency vulnerability check..."
-        safety check --json --output safety-report.json || echo "Safety found vulnerabilities"
-        safety check --short-report || echo "Safety check completed"
+      - name: Run Safety dependency check
+        run: |
+          echo "Running Safety dependency vulnerability check..."
+          safety check --json --output safety-report.json || \
+            echo "Safety found vulnerabilities"
+          safety check --short-report || echo "Safety check completed"
 
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: python-security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
-        retention-days: 30
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: python-security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+          retention-days: 30
 
   # ==========================================
   # CodeQL Analysis
@@ -100,33 +103,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
+        language: ['python']
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        # Override default queries with security-focused ones
-        queries: security-extended,security-and-quality
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Override default queries with security-focused ones
+          queries: security-extended,security-and-quality
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{ matrix.language }}"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
 
   # ==========================================
   # Security Summary
@@ -138,23 +141,26 @@ jobs:
     if: always()
 
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
 
-    - name: Create security summary
-      run: |
-        echo "# Security Scan Summary" > security-summary.md
-        echo "" >> security-summary.md
-        echo "## Scan Results" >> security-summary.md
-        echo "- Credential Scan: ${{ needs.credential-scan.result }}" >> security-summary.md
-        echo "- Python Security: ${{ needs.python-security.result }}" >> security-summary.md
-        echo "- CodeQL Analysis: ${{ needs.codeql.result }}" >> security-summary.md
-        echo "" >> security-summary.md
-        echo "## Artifacts Generated" >> security-summary.md
-        ls -la || echo "No artifacts found"
+      - name: Create security summary
+        run: |
+          echo "# Security Scan Summary" > security-summary.md
+          echo "" >> security-summary.md
+          echo "## Scan Results" >> security-summary.md
+          echo "- Credential Scan: ${{ needs.credential-scan.result }}" \
+            >> security-summary.md
+          echo "- Python Security: ${{ needs.python-security.result }}" \
+            >> security-summary.md
+          echo "- CodeQL Analysis: ${{ needs.codeql.result }}" \
+            >> security-summary.md
+          echo "" >> security-summary.md
+          echo "## Artifacts Generated" >> security-summary.md
+          ls -la || echo "No artifacts found"
 
-    - name: Upload security summary
-      uses: actions/upload-artifact@v4
-      with:
-        name: security-summary
-        path: security-summary.md
+      - name: Upload security summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary
+          path: security-summary.md

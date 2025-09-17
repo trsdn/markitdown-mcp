@@ -16,10 +16,10 @@ on:
         default: 'standard'
         type: choice
         options:
-        - standard
-        - comprehensive
-        - performance
-        - security
+          - standard
+          - comprehensive
+          - performance
+          - security
 
 # Cancel duplicate runs
 concurrency:
@@ -37,7 +37,7 @@ jobs:
   test-matrix:
     name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       fail-fast: false
       matrix:
@@ -47,77 +47,77 @@ jobs:
           # Exclude some combinations to reduce CI time
           - os: windows-latest
             python-version: "3.11"
-          - os: macos-latest  
+          - os: macos-latest
             python-version: "3.12"
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-${{ matrix.python-version }}-
-          ${{ runner.os }}-pip-
-          
-    - name: Install system dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-        
-    - name: Install system dependencies (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew update
-        # Add any macOS-specific dependencies here
-        
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio pytest-cov pytest-xdist
-        pip install 'markitdown[all]'
-        
-    - name: Install optional dependencies
-      continue-on-error: true
-      run: |
-        pip install openpyxl xlrd pandas pymupdf pdfplumber
-        pip install python-docx python-pptx
-        pip install beautifulsoup4 lxml
-        pip install psutil
-        
-    - name: Generate test data
-      run: |
-        python tests/test_data_generator.py
-        
-    - name: Run unit tests
-      run: |
-        pytest tests/unit/ -v --tb=short --cov=markitdown_mcp --cov-report=xml
-        
-    - name: Run integration tests
-      run: |
-        pytest tests/integration/ -v --tb=short -x
-        
-    - name: Run compatibility tests
-      run: |
-        pytest tests/compatibility/ -v --tb=short -m "compatibility and not slow"
-        
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          # Add any macOS-specific dependencies here
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-cov pytest-xdist
+          pip install 'markitdown[all]'
+
+      - name: Install optional dependencies
+        continue-on-error: true
+        run: |
+          pip install openpyxl xlrd pandas pymupdf pdfplumber
+          pip install python-docx python-pptx
+          pip install beautifulsoup4 lxml
+          pip install psutil
+
+      - name: Generate test data
+        run: |
+          python tests/test_data_generator.py
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --tb=short --cov=markitdown_mcp --cov-report=xml
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --tb=short -x
+
+      - name: Run compatibility tests
+        run: |
+          pytest tests/compatibility/ -v --tb=short -m "compatibility and not slow"
+
+      - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
 
   # ==========================================
   # Security Tests
@@ -127,58 +127,58 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-matrix
     if: github.event_name == 'push' || github.event.inputs.test_level == 'security' || github.event.inputs.test_level == 'comprehensive'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .[test,dev]
-        pip install 'markitdown[all]'
-        pip install bandit safety
-        
-    - name: Generate test data
-      run: |
-        python tests/test_data_generator.py
-        
-    - name: Run security tests
-      env:
-        CI: true
-      run: |
-        echo "CI environment: CI=$CI"
-        pytest tests/security/ -v --tb=short -m "security" -s
-        
-    - name: Run Bandit security linter
-      run: |
-        echo "Running Bandit security linter..."
-        bandit -r markitdown_mcp/ -f json -o bandit-report.json || echo '{"issues": []}' > bandit-report.json
-        bandit -r markitdown_mcp/ -f txt || echo "Bandit text output failed"
-        echo "Bandit report created:"
-        ls -la bandit-report.json || echo "bandit-report.json not found"
-        
-    - name: Check dependencies for known vulnerabilities
-      run: |
-        echo "Running Safety check..."
-        safety check --json --output safety-report.json || echo '{"vulnerabilities": []}' > safety-report.json
-        safety check || echo "Safety check failed"
-        echo "Safety report created:"
-        ls -la safety-report.json || echo "safety-report.json not found"
-        
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[test,dev]
+          pip install 'markitdown[all]'
+          pip install bandit safety
+
+      - name: Generate test data
+        run: |
+          python tests/test_data_generator.py
+
+      - name: Run security tests
+        env:
+          CI: true
+        run: |
+          echo "CI environment: CI=$CI"
+          pytest tests/security/ -v --tb=short -m "security" -s
+
+      - name: Run Bandit security linter
+        run: |
+          echo "Running Bandit security linter..."
+          bandit -r markitdown_mcp/ -f json -o bandit-report.json || echo '{"issues": []}' > bandit-report.json
+          bandit -r markitdown_mcp/ -f txt || echo "Bandit text output failed"
+          echo "Bandit report created:"
+          ls -la bandit-report.json || echo "bandit-report.json not found"
+
+      - name: Check dependencies for known vulnerabilities
+        run: |
+          echo "Running Safety check..."
+          safety check --json --output safety-report.json || echo '{"vulnerabilities": []}' > safety-report.json
+          safety check || echo "Safety check failed"
+          echo "Safety report created:"
+          ls -la safety-report.json || echo "safety-report.json not found"
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
 
   # ==========================================
   # Performance Tests
@@ -188,43 +188,43 @@ jobs:
     runs-on: ubuntu-latest
     needs: test-matrix
     if: github.event_name == 'push' || github.event.inputs.test_level == 'performance' || github.event.inputs.test_level == 'comprehensive'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio pytest-benchmark
-        pip install 'markitdown[all]'
-        pip install psutil memory_profiler
-        
-    - name: Generate test data
-      run: |
-        python tests/test_data_generator.py
-        
-    - name: Run performance tests
-      run: |
-        pytest tests/performance/ -v --tb=short -m "performance and not slow" --benchmark-json=benchmark-results.json
-        
-    - name: Run slow performance tests
-      if: github.event.inputs.test_level == 'performance' || github.event.inputs.test_level == 'comprehensive'
-      run: |
-        pytest tests/performance/ -v --tb=short -m "slow" --benchmark-json=benchmark-slow-results.json
-        
-    - name: Upload benchmark results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: performance-results
-        path: |
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-benchmark
+          pip install 'markitdown[all]'
+          pip install psutil memory_profiler
+
+      - name: Generate test data
+        run: |
+          python tests/test_data_generator.py
+
+      - name: Run performance tests
+        run: |
+          pytest tests/performance/ -v --tb=short -m "performance and not slow" --benchmark-json=benchmark-results.json
+
+      - name: Run slow performance tests
+        if: github.event.inputs.test_level == 'performance' || github.event.inputs.test_level == 'comprehensive'
+        run: |
+          pytest tests/performance/ -v --tb=short -m "slow" --benchmark-json=benchmark-slow-results.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results
+          path: |
           benchmark-results.json
           benchmark-slow-results.json
 
@@ -237,61 +237,61 @@ jobs:
     needs: [test-matrix, security-tests, performance-tests]
     if: github.event.inputs.test_level == 'comprehensive' || github.event_name == 'schedule'
     timeout-minutes: 60
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install all dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio pytest-cov pytest-xdist pytest-benchmark
-        pip install 'markitdown[all]'
-        pip install openpyxl xlrd pandas pymupdf pdfplumber
-        pip install python-docx python-pptx
-        pip install beautifulsoup4 lxml
-        pip install psutil memory_profiler
-        
-    - name: Generate comprehensive test data
-      run: |
-        python tests/test_data_generator.py
-        
-    - name: Run all tests with coverage
-      run: |
-        pytest -v --tb=short --cov=markitdown_mcp --cov-report=xml --cov-report=html \
-               --maxfail=10 -n auto tests/
-        
-    - name: Generate test report
-      if: always()
-      run: |
-        python -c "
-        import json
-        import os
-        
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install all dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-cov pytest-xdist pytest-benchmark
+          pip install 'markitdown[all]'
+          pip install openpyxl xlrd pandas pymupdf pdfplumber
+          pip install python-docx python-pptx
+          pip install beautifulsoup4 lxml
+          pip install psutil memory_profiler
+
+      - name: Generate comprehensive test data
+        run: |
+          python tests/test_data_generator.py
+
+      - name: Run all tests with coverage
+        run: |
+          pytest -v --tb=short --cov=markitdown_mcp --cov-report=xml --cov-report=html \
+          --maxfail=10 -n auto tests/
+
+      - name: Generate test report
+        if: always()
+        run: |
+          python -c "
+          import json
+          import os
+
         # Create test summary
-        summary = {
-            'python_version': '${{ matrix.python-version }}',
-            'os': 'ubuntu-latest',
-            'comprehensive_run': True,
-            'timestamp': '$(date -Iseconds)'
-        }
-        
-        with open('test-summary.json', 'w') as f:
-            json.dump(summary, f, indent=2)
-        "
-        
-    - name: Upload comprehensive results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: comprehensive-results
-        path: |
+          summary = {
+          'python_version': '${{ matrix.python-version }}',
+          'os': 'ubuntu-latest',
+          'comprehensive_run': True,
+          'timestamp': '$(date -Iseconds)'
+          }
+
+          with open('test-summary.json', 'w') as f:
+          json.dump(summary, f, indent=2)
+          "
+
+      - name: Upload comprehensive results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-results
+          path: |
           coverage.xml
           htmlcov/
           test-summary.json
@@ -302,54 +302,54 @@ jobs:
   test-docs:
     name: Test Documentation Build
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install documentation dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
         # Add documentation tools if needed
         # pip install sphinx mkdocs
-        
-    - name: Validate README and documentation
-      run: |
-        python -c "
-        import os
-        from pathlib import Path
-        
+
+      - name: Validate README and documentation
+        run: |
+          python -c "
+          import os
+          from pathlib import Path
+
         # Check required documentation files exist
-        required_files = ['README.md', 'docs/development/TESTING_STRATEGY.md', 'AGENTS.md']
-        missing_files = []
-        
-        for file in required_files:
-            if not Path(file).exists():
-                missing_files.append(file)
-        
-        if missing_files:
-            print(f'Missing documentation files: {missing_files}')
-            exit(1)
-        else:
-            print('All required documentation files present')
-        
+          required_files = ['README.md', 'docs/development/TESTING_STRATEGY.md', 'AGENTS.md']
+          missing_files = []
+
+          for file in required_files:
+          if not Path(file).exists():
+          missing_files.append(file)
+
+          if missing_files:
+          print(f'Missing documentation files: {missing_files}')
+          exit(1)
+          else:
+          print('All required documentation files present')
+
         # Check README has essential sections
-        readme_content = Path('README.md').read_text()
-        required_sections = ['Installation', 'Usage', 'Features']
-        
-        for section in required_sections:
-            if section.lower() not in readme_content.lower():
-                print(f'README missing {section} section')
-                exit(1)
-        
-        print('Documentation validation passed')
-        "
+          readme_content = Path('README.md').read_text()
+          required_sections = ['Installation', 'Usage', 'Features']
+
+          for section in required_sections:
+          if section.lower() not in readme_content.lower():
+          print(f'README missing {section} section')
+          exit(1)
+
+          print('Documentation validation passed')
+          "
 
   # ==========================================
   # Linting and Code Quality
@@ -357,38 +357,38 @@ jobs:
   lint:
     name: Linting and Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install linting tools
-      run: |
-        python -m pip install --upgrade pip
-        pip install black isort flake8 mypy bandit
-        pip install -e .
-        
-    - name: Run Black (code formatting)
-      run: |
-        black --check --diff markitdown_mcp/
-        
-    - name: Run isort (import sorting)  
-      run: |
-        isort --check-only --diff markitdown_mcp/
-        
-    - name: Run flake8 (style guide)
-      run: |
-        flake8 markitdown_mcp/ --max-line-length=100 --extend-ignore=E203,W503
-        
-    - name: Run mypy (type checking)
-      continue-on-error: true
-      run: |
-        mypy markitdown_mcp/ --ignore-missing-imports
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black isort flake8 mypy bandit
+          pip install -e .
+
+      - name: Run Black (code formatting)
+        run: |
+          black --check --diff markitdown_mcp/
+
+      - name: Run isort (import sorting)
+        run: |
+          isort --check-only --diff markitdown_mcp/
+
+      - name: Run flake8 (style guide)
+        run: |
+          flake8 markitdown_mcp/ --max-line-length=100 --extend-ignore=E203,W503
+
+      - name: Run mypy (type checking)
+        continue-on-error: true
+        run: |
+          mypy markitdown_mcp/ --ignore-missing-imports
 
   # ==========================================
   # MCP Protocol Smoke Tests
@@ -399,42 +399,42 @@ jobs:
     needs: test-matrix
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio
-        pip install 'markitdown[all]'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio
+          pip install 'markitdown[all]'
 
-    - name: Generate test data
-      run: |
-        python tests/test_data_generator.py
+      - name: Generate test data
+        run: |
+          python tests/test_data_generator.py
 
-    - name: Run MCP protocol smoke tests
-      run: |
-        pytest tests/integration/test_mcp_protocol_smoke.py -v --tb=short -m "integration"
+      - name: Run MCP protocol smoke tests
+        run: |
+          pytest tests/integration/test_mcp_protocol_smoke.py -v --tb=short -m "integration"
 
-    - name: Test MCP server executable
-      run: |
+      - name: Test MCP server executable
+        run: |
         # Quick test that the MCP server executable works
-        timeout 10s markitdown-mcp --help || echo "Help command completed"
+          timeout 10s markitdown-mcp --help || echo "Help command completed"
 
-    - name: Upload MCP test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: mcp-protocol-results
-        path: |
+      - name: Upload MCP test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mcp-protocol-results
+          path: |
           pytest-results.xml
-        retention-days: 7
+          retention-days: 7
 
   # ==========================================
   # Test Results Summary
@@ -444,31 +444,31 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-matrix, security-tests, performance-tests, test-docs, lint, mcp-protocol-tests]
     if: always()
-    
+
     steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      
-    - name: Create test summary
-      run: |
-        echo "# Test Results Summary" > test-summary.md
-        echo "" >> test-summary.md
-        echo "## Test Matrix Results" >> test-summary.md
-        echo "- Matrix tests: ${{ needs.test-matrix.result }}" >> test-summary.md
-        echo "- Security tests: ${{ needs.security-tests.result }}" >> test-summary.md
-        echo "- Performance tests: ${{ needs.performance-tests.result }}" >> test-summary.md
-        echo "- Documentation tests: ${{ needs.test-docs.result }}" >> test-summary.md
-        echo "- Linting: ${{ needs.lint.result }}" >> test-summary.md
-        echo "- MCP Protocol tests: ${{ needs.mcp-protocol-tests.result }}" >> test-summary.md
-        echo "" >> test-summary.md
-        echo "## Artifacts" >> test-summary.md
-        ls -la
-        
-    - name: Upload test summary
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-summary
-        path: test-summary.md
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create test summary
+        run: |
+          echo "# Test Results Summary" > test-summary.md
+          echo "" >> test-summary.md
+          echo "## Test Matrix Results" >> test-summary.md
+          echo "- Matrix tests: ${{ needs.test-matrix.result }}" >> test-summary.md
+          echo "- Security tests: ${{ needs.security-tests.result }}" >> test-summary.md
+          echo "- Performance tests: ${{ needs.performance-tests.result }}" >> test-summary.md
+          echo "- Documentation tests: ${{ needs.test-docs.result }}" >> test-summary.md
+          echo "- Linting: ${{ needs.lint.result }}" >> test-summary.md
+          echo "- MCP Protocol tests: ${{ needs.mcp-protocol-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          echo "## Artifacts" >> test-summary.md
+          ls -la
+
+      - name: Upload test summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-summary
+          path: test-summary.md
 
   # ==========================================
   # Nightly Extended Tests
@@ -478,54 +478,55 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     timeout-minutes: 120
-    
+
     strategy:
       matrix:
         test-category: [stress, compatibility-extended, memory-intensive]
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
-        
-    - name: Install full dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e .
-        pip install pytest pytest-asyncio pytest-xdist
-        pip install 'markitdown[all]'
-        pip install openpyxl xlrd pandas pymupdf pdfplumber
-        pip install python-docx python-pptx
-        pip install beautifulsoup4 lxml
-        pip install psutil memory_profiler
-        
-    - name: Generate test data
-      run: |
-        python tests/test_data_generator.py
-        
-    - name: Run stress tests
-      if: matrix.test-category == 'stress'
-      run: |
-        pytest tests/performance/ tests/security/ -v -m "slow" --tb=short --maxfail=5
-        
-    - name: Run extended compatibility tests
-      if: matrix.test-category == 'compatibility-extended'
-      run: |
-        pytest tests/compatibility/ -v --tb=short --maxfail=5
-        
-    - name: Run memory intensive tests
-      if: matrix.test-category == 'memory-intensive'
-      run: |
-        pytest tests/performance/test_memory_usage.py -v --tb=short --maxfail=5
-        
-    - name: Upload nightly results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: nightly-${{ matrix.test-category }}-results
-        path: |
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install full dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-xdist
+          pip install 'markitdown[all]'
+          pip install openpyxl xlrd pandas pymupdf pdfplumber
+          pip install python-docx python-pptx
+          pip install beautifulsoup4 lxml
+          pip install psutil memory_profiler
+
+      - name: Generate test data
+        run: |
+          python tests/test_data_generator.py
+
+      - name: Run stress tests
+        if: matrix.test-category == 'stress'
+        run: |
+          pytest tests/performance/ tests/security/ -v -m "slow" --tb=short --maxfail=5
+
+      - name: Run extended compatibility tests
+        if: matrix.test-category == 'compatibility-extended'
+        run: |
+          pytest tests/compatibility/ -v --tb=short --maxfail=5
+
+      - name: Run memory intensive tests
+        if: matrix.test-category == 'memory-intensive'
+        run: |
+          pytest tests/performance/test_memory_usage.py -v --tb=short --maxfail=5
+
+      - name: Upload nightly results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-${{ matrix.test-category }}-results
+          path: |
           pytest-results.xml
+
