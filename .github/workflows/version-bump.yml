@@ -27,6 +27,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   analyze-changes:
@@ -217,15 +218,32 @@ jobs:
               --body-file pr_body.md
             echo "✅ Version bump PR #$EXISTING_PR updated successfully!"
           else
-            # Create new PR
-            gh pr create \
+            # Try to create new PR
+            if gh pr create \
               --title "chore: bump version to v$NEW_VERSION" \
               --body-file pr_body.md \
               --base main \
               --head "$BRANCH_NAME" \
               --label "release" \
-              --label "automated"
-            echo "✅ Version bump PR created successfully!"
+              --label "automated" 2>/dev/null; then
+              echo "✅ Version bump PR created successfully!"
+            else
+              echo "⚠️  Could not create PR automatically due to repository permissions."
+              echo "📝 The branch 'version-bump/v$NEW_VERSION' has been pushed."
+              echo ""
+              echo "👉 Please create the PR manually:"
+              echo "   1. Go to: https://github.com/${{ github.repository }}/pull/new/$BRANCH_NAME"
+              echo "   2. Use this title: 'chore: bump version to v$NEW_VERSION'"
+              echo "   3. Copy the description from below"
+              echo ""
+              echo "📋 PR Description:"
+              echo "---"
+              cat pr_body.md
+              echo "---"
+              echo ""
+              echo "Alternatively, enable 'Allow GitHub Actions to create and approve pull requests' in:"
+              echo "Settings → Actions → General → Workflow permissions"
+            fi
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
