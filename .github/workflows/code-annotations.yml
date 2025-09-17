@@ -225,7 +225,7 @@ jobs:
           # Check for unsafe file operations
           git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
             if [ -f "$file" ]; then
-              grep -n -E 'open\s*\(' "$file" | grep -v -E '(with\s+open|mode=.*["\'][rw]["\'])' | while IFS=: read -r line_num content; do
+              grep -n -E 'open[[:space:]]*\\(' "$file" | grep -v -E '(with[[:space:]]+open|mode=.*["\'][rw]["\'])' | while IFS=: read -r line_num content; do
                 echo "::notice file=$file,line=$line_num::Consider using 'with open()' for safer file handling: $content"
               done || true
             fi
@@ -234,7 +234,7 @@ jobs:
           # Check for eval/exec usage
           git diff origin/${{ github.base_ref }}..HEAD --name-only | grep '\.py$' | while read file; do
             if [ -f "$file" ]; then
-              grep -n -E '\b(eval|exec)\s*\(' "$file" | while IFS=: read -r line_num content; do
+              grep -n -E '\\b(eval|exec)[[:space:]]*\\(' "$file" | while IFS=: read -r line_num content; do
                 echo "::error file=$file,line=$line_num::Dangerous eval/exec usage detected: $content"
               done || true
             fi

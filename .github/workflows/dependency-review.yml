@@ -29,9 +29,6 @@ jobs:
         # Allow these common open-source licenses
         allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, GPL-3.0, LGPL-2.1, LGPL-3.0
 
-        # Deny these problematic licenses
-        deny-licenses: AGPL-1.0, AGPL-3.0, GPL-2.0
-
         # Create a comment on the PR with results
         comment-summary-in-pr: true
 
