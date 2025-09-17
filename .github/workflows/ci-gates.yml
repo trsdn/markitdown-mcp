@@ -88,7 +88,7 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml \
             --cov-report=json \
-            --cov-fail-under=74 \
+            --cov-fail-under=80 \
             --junitxml=junit.xml \
             -n auto \
             -v
@@ -110,10 +110,10 @@ jobs:
           python -c "
           import sys
           coverage = $coverage_percent
-          if coverage < 74:
-              print(f'Coverage {coverage}% is below 74% threshold')
+          if coverage < 80:
+              print(f'Coverage {coverage}% is below 80% threshold')
               sys.exit(1)
-          print(f'Coverage {coverage}% meets 74% threshold')
+          print(f'Coverage {coverage}% meets 80% threshold')
           "
 
       - name: Upload test results
@@ -332,7 +332,7 @@ jobs:
           | 🔧 Lint | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '❌ Failed' }} | ruff linting | ${{ needs.quality-checks.result == 'success' && 'None' || 'Run \`ruff check . --fix\`' }} |
           | 📝 Types | ${{ needs.quality-checks.result == 'success' && '✅ Passed' || '⚠️ Check' }} | mypy type checking | ${{ needs.quality-checks.result == 'success' && 'None' || 'Add type annotations' }} |
           | 🧪 Tests | ${{ needs.unit-tests-coverage.result == 'success' && '✅ Passed' || '❌ Failed' }} | Unit tests | ${{ needs.unit-tests-coverage.result == 'success' && 'None' || 'Fix failing tests' }} |
-          | 📊 Coverage | ${coverage} | Minimum: 74% | $([ "${coverage%.*}" -ge 74 ] 2>/dev/null && echo "None" || echo "Add more tests") |
+          | 📊 Coverage | ${coverage} | Minimum: 80% | $([ "${coverage%.*}" -ge 80 ] 2>/dev/null && echo "None" || echo "Add more tests") |
           | 🔌 MCP | ${{ needs.mcp-contract-checks.result == 'success' && '✅ Valid' || '❌ Invalid' }} | Protocol compliance | ${{ needs.mcp-contract-checks.result == 'success' && 'None' || 'Fix MCP protocol issues' }} |
           | 🔒 Security | ${{ needs.dependency-checks.result == 'success' && '✅ Clean' || '⚠️ Issues' }} | Dependency audit | ${{ needs.dependency-checks.result == 'success' && 'None' || 'Review security findings' }} |
 
