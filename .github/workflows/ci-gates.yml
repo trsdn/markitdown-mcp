@@ -1,6 +1,7 @@
 name: CI Quality Gates
 
-on:  pull_request:
+on:
+  pull_request:
     paths-ignore:
       - '.github/workflows/**'
       - '.github/actions/**'
@@ -12,7 +13,8 @@ on:  pull_request:
       - '.github/CODEOWNERS'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
-      - '.github/ci-cd-paths.yml'  push:
+      - '.github/ci-cd-paths.yml'
+  push:
     branches: [main]
     paths-ignore:
       - '.github/workflows/**'

@@ -1,6 +1,7 @@
 name: Security
 
-on:  push:
+on:
+  push:
     branches: [main]
     paths-ignore:
       - '.github/workflows/**'
@@ -13,7 +14,8 @@ on:  push:
       - '.github/CODEOWNERS'
       - '.github/pull_request_template.md'
       - '.github/ISSUE_TEMPLATE/**'
-      - '.github/ci-cd-paths.yml'  pull_request:
+      - '.github/ci-cd-paths.yml'
+  pull_request:
     paths-ignore:
       - '.github/workflows/**'
       - '.github/actions/**'

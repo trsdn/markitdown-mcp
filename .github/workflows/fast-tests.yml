@@ -1,6 +1,7 @@
 name: Fast Tests
 
-on:  pull_request:
+on:
+  pull_request:
     paths-ignore:
       - '.github/workflows/**'
       - '.github/actions/**'
@@ -17,7 +18,8 @@ on:  pull_request:
       - '**.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
-      - '.github/workflows/fast-tests.yml'  push:
+      - '.github/workflows/fast-tests.yml'
+  push:
     branches: [main]
     paths-ignore:
       - '.github/workflows/**'
