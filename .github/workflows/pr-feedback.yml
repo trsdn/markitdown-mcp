@@ -109,7 +109,10 @@ jobs:
           # 3. Type Issues
           # ===================
           echo "### 📝 Type Checking" >> pr-feedback.md
-          if ! mypy markitdown_mcp --json-report mypy_report.json > mypy_output.txt 2>&1; then
+          # First check if Python files have syntax errors
+          if python -m py_compile markitdown_mcp/*.py 2>/dev/null; then
+            # Only run mypy if files compile
+            if ! mypy markitdown_mcp --json-report mypy_report.json > mypy_output.txt 2>&1; then
             type_issues=$(jq '.reports | keys | length' mypy_report.json 2>/dev/null || echo "1")
             echo "❌ **Type checking issues found**" >> pr-feedback.md
             echo "" >> pr-feedback.md
@@ -121,9 +124,14 @@ jobs:
             echo "" >> pr-feedback.md
             echo "**Fix**: Add proper type annotations and resolve type errors" >> pr-feedback.md
             echo "</details>" >> pr-feedback.md
-            total_issues=$((total_issues + type_issues))
+              total_issues=$((total_issues + type_issues))
+            else
+              echo "✅ **Type checking passed**" >> pr-feedback.md
+            fi
           else
-            echo "✅ **Type checking passed**" >> pr-feedback.md
+            echo "❌ **Python syntax errors detected - cannot run type checking**" >> pr-feedback.md
+            type_issues=1
+            total_issues=$((total_issues + 1))
           fi
           echo "" >> pr-feedback.md
 
