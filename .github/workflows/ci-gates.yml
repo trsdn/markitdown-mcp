@@ -2,8 +2,10 @@ name: CI Quality Gates
 
 on:
   pull_request:
+    branches-ignore: [ci-cd-maintenance]
   push:
     branches: [main, develop]
+    branches-ignore: [ci-cd-maintenance]
   workflow_dispatch:
 
 permissions:

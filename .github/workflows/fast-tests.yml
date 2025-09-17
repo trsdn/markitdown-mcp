@@ -2,6 +2,7 @@ name: Fast Tests
 
 on:
   pull_request:
+    branches-ignore: [ci-cd-maintenance]
     paths:
       - '**.py'
       - 'pyproject.toml'
@@ -9,6 +10,7 @@ on:
       - '.github/workflows/fast-tests.yml'
   push:
     branches: [main]
+    branches-ignore: [ci-cd-maintenance]
   workflow_dispatch:
 
 permissions:

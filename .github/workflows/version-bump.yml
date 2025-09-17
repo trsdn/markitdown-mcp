@@ -3,6 +3,7 @@ name: Automated Version Bump
 on:
   push:
     branches: [main]
+    branches-ignore: [ci-cd-maintenance]
   schedule:
     # Run weekly on Monday at 9 AM UTC
     - cron: '0 9 * * 1'

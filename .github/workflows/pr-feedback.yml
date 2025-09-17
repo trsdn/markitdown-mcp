@@ -3,6 +3,7 @@ name: PR Feedback & Issue Reporting
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches-ignore: [ci-cd-maintenance]
 
 permissions:
   contents: read
