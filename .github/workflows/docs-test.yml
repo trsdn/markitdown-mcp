@@ -1,0 +1,19 @@
+name: Documentation Test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test-docs:
+    name: Test Documentation
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('docs/conf.py') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check docs directory
+        run: |
+          echo "Docs directory contents:"
+          ls -la docs/
+          echo "conf.py exists:"
+          test -f docs/conf.py && echo "YES" || echo "NO"
