@@ -1,0 +1,327 @@
+name: CI/CD Maintenance
+
+on:
+  push:
+    branches: [ ci-cd-maintenance ]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (validate only, no changes)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+concurrency:
+  group: ci-cd-maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================
+  # Validate CI/CD Changes
+  # ==========================================
+  validate-cicd-changes:
+    name: Validate CI/CD Changes
+    runs-on: ubuntu-latest
+    outputs:
+      changes-detected: ${{ steps.detect-changes.outputs.changes-detected }}
+      changed-files: ${{ steps.detect-changes.outputs.changed-files }}
+      impact-summary: ${{ steps.analyze-impact.outputs.summary }}
+      security-status: ${{ steps.security-check.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install validation tools
+        run: |
+          pip install pyyaml jsonschema
+
+      - name: Detect CI/CD changes
+        id: detect-changes
+        run: |
+          echo "Detecting CI/CD related changes..."
+
+          # Get changed files compared to main
+          changed_files=$(git diff --name-only origin/main..HEAD | grep -E '\.(yml|yaml)$' | grep -E '^\.github/' || true)
+
+          if [ -z "$changed_files" ]; then
+            echo "changes-detected=false" >> $GITHUB_OUTPUT
+            echo "changed-files=" >> $GITHUB_OUTPUT
+            echo "::notice::No CI/CD workflow changes detected"
+          else
+            echo "changes-detected=true" >> $GITHUB_OUTPUT
+            echo "changed-files<<EOF" >> $GITHUB_OUTPUT
+            echo "$changed_files" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            echo "::group::Changed CI/CD Files"
+            echo "$changed_files"
+            echo "::endgroup::"
+          fi
+
+      - name: Validate YAML syntax
+        if: steps.detect-changes.outputs.changes-detected == 'true'
+        run: |
+          echo "::group::Validating YAML syntax"
+
+          # Check each changed workflow file
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              echo "Validating: $file"
+              python -c "
+          import yaml
+          import sys
+          try:
+              with open('$file', 'r') as f:
+                  yaml.safe_load(f)
+              print('✅ $file - Valid YAML')
+          except yaml.YAMLError as e:
+              print(f'❌ $file - YAML Error: {e}')
+              sys.exit(1)
+          except Exception as e:
+              print(f'❌ $file - Error: {e}')
+              sys.exit(1)
+              " || exit 1
+            fi
+          done <<< "${{ steps.detect-changes.outputs.changed-files }}"
+
+          echo "::endgroup::"
+
+      - name: Validate GitHub Actions workflow schema
+        if: steps.detect-changes.outputs.changes-detected == 'true'
+        run: |
+          echo "::group::Validating GitHub Actions schema"
+
+          # Basic workflow structure validation
+          while IFS= read -r file; do
+            if [ -f "$file" ] && [[ "$file" == *".github/workflows/"* ]]; then
+              echo "Validating workflow structure: $file"
+              python -c "
+          import yaml
+          import sys
+
+          required_fields = ['name', 'on', 'jobs']
+
+          try:
+              with open('$file', 'r') as f:
+                  workflow = yaml.safe_load(f)
+
+              if not isinstance(workflow, dict):
+                  print('❌ $file - Workflow must be a dictionary')
+                  sys.exit(1)
+
+              for field in required_fields:
+                  if field not in workflow:
+                      print(f'❌ $file - Missing required field: {field}')
+                      sys.exit(1)
+
+              if not isinstance(workflow['jobs'], dict) or len(workflow['jobs']) == 0:
+                  print('❌ $file - Workflows must have at least one job')
+                  sys.exit(1)
+
+              print('✅ $file - Valid workflow structure')
+          except Exception as e:
+              print(f'❌ $file - Validation error: {e}')
+              sys.exit(1)
+              "
+            fi
+          done <<< "${{ steps.detect-changes.outputs.changed-files }}"
+
+          echo "::endgroup::"
+
+      - name: Security check for workflows
+        id: security-check
+        if: steps.detect-changes.outputs.changes-detected == 'true'
+        run: |
+          echo "::group::Security Analysis"
+
+          security_issues=0
+
+          # Check for potentially dangerous patterns
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              echo "Security scanning: $file"
+
+              # Check for shell injection risks
+              if grep -n "run:.*\${{" "$file" | grep -v "github\." | grep -v "inputs\." | grep -v "secrets\."; then
+                echo "⚠️ $file - Potential shell injection risk with user-controlled input"
+                security_issues=$((security_issues + 1))
+              fi
+
+              # Check for pull_request_target with checkout
+              if grep -n "pull_request_target" "$file" && grep -n "actions/checkout" "$file"; then
+                echo "🔍 $file - Uses pull_request_target with checkout - ensure this is safe"
+              fi
+
+              # Check for secret usage
+              if grep -n "secrets\." "$file"; then
+                echo "🔍 $file - Uses secrets - verify proper handling"
+              fi
+
+              # Check for dangerous commands
+              if grep -n -E "(curl|wget|eval|exec).*\\\$" "$file"; then
+                echo "⚠️ $file - Contains potentially dangerous commands with variables"
+                security_issues=$((security_issues + 1))
+              fi
+            fi
+          done <<< "${{ steps.detect-changes.outputs.changed-files }}"
+
+          if [ $security_issues -eq 0 ]; then
+            echo "status=secure" >> $GITHUB_OUTPUT
+            echo "✅ No security issues detected"
+          else
+            echo "status=warnings" >> $GITHUB_OUTPUT
+            echo "⚠️ $security_issues potential security issues detected - manual review required"
+          fi
+
+          echo "::endgroup::"
+
+      - name: Analyze impact
+        id: analyze-impact
+        if: steps.detect-changes.outputs.changes-detected == 'true'
+        run: |
+          echo "::group::Impact Analysis"
+
+          impact_summary=""
+
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              echo "Analyzing impact of: $file"
+
+              # Check if it's a new workflow
+              if ! git show origin/main:"$file" >/dev/null 2>&1; then
+                impact_summary="${impact_summary}🆕 NEW: $file\n"
+                echo "🆕 New workflow file: $file"
+              else
+                # Check what changed in existing workflow
+                echo "📝 Modified workflow: $file"
+                impact_summary="${impact_summary}📝 MODIFIED: $file\n"
+
+                # Show key changes
+                if git diff origin/main..HEAD "$file" | grep -E "^\+.*name:|^\-.*name:"; then
+                  echo "  - Job/workflow name changes detected"
+                fi
+
+                if git diff origin/main..HEAD "$file" | grep -E "^\+.*run:|^\-.*run:"; then
+                  echo "  - Command changes detected"
+                fi
+
+                if git diff origin/main..HEAD "$file" | grep -E "^\+.*uses:|^\-.*uses:"; then
+                  echo "  - Action usage changes detected"
+                fi
+              fi
+            fi
+          done <<< "${{ steps.detect-changes.outputs.changed-files }}"
+
+          # Save summary for use in other steps
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$impact_summary" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "::endgroup::"
+
+      - name: Generate review summary
+        if: steps.detect-changes.outputs.changes-detected == 'true'
+        run: |
+          echo "::group::CI/CD Maintenance Review Summary"
+          echo "============================================"
+          echo "📋 CI/CD MAINTENANCE REVIEW SUMMARY"
+          echo "============================================"
+          echo ""
+          echo "🔍 **Security Status**: ${{ steps.security-check.outputs.status }}"
+          echo ""
+          echo "📁 **Changed Files**:"
+          echo "${{ steps.detect-changes.outputs.changed-files }}" | sed 's/^/  - /'
+          echo ""
+          echo "💥 **Impact Summary**:"
+          echo -e "${{ steps.analyze-impact.outputs.summary }}" | sed 's/^/  /'
+          echo ""
+          echo "✅ **Validation Results**:"
+          echo "  - YAML syntax: PASSED"
+          echo "  - Workflow schema: PASSED"
+          echo "  - Security scan: ${{ steps.security-check.outputs.status }}"
+          echo ""
+          echo "📋 **Manual Review Checklist**:"
+          echo "  □ Review all changed workflow files"
+          echo "  □ Verify security implications"
+          echo "  □ Check for circular dependencies"
+          echo "  □ Ensure proper permissions"
+          echo "  □ Test rollback plan if needed"
+          echo ""
+          echo "🚨 **IMPORTANT**: This workflow requires MANUAL MERGE"
+          echo "   Only merge after thorough review of all changes"
+          echo ""
+          echo "============================================"
+          echo "::endgroup::"
+
+  # ==========================================
+  # Generate PR Comment (if applicable)
+  # ==========================================
+  comment-on-pr:
+    name: Add Review Comment
+    runs-on: ubuntu-latest
+    needs: validate-cicd-changes
+    if: needs.validate-cicd-changes.outputs.changes-detected == 'true' && github.event_name == 'push'
+
+    steps:
+      - name: Find associated PR
+        id: find-pr
+        run: |
+          # Try to find PR associated with this branch
+          pr_number=$(gh api repos/${{ github.repository }}/pulls \
+            --jq ".[] | select(.head.ref == \"${{ github.ref_name }}\") | .number" || true)
+
+          if [ -n "$pr_number" ]; then
+            echo "pr-number=$pr_number" >> $GITHUB_OUTPUT
+            echo "Found associated PR: #$pr_number"
+          else
+            echo "No associated PR found"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on PR
+        if: steps.find-pr.outputs.pr-number
+        run: |
+          gh api repos/${{ github.repository }}/issues/${{ steps.find-pr.outputs.pr-number }}/comments \
+            --method POST \
+            --field body="## 🔧 CI/CD Maintenance Review Required
+
+**Security Status**: ${{ needs.validate-cicd-changes.outputs.security-status }}
+
+**Changed Files**:
+${{ needs.validate-cicd-changes.outputs.changed-files }}
+
+**Impact Summary**:
+${{ needs.validate-cicd-changes.outputs.impact-summary }}
+
+**⚠️ Manual Review Required**
+This PR contains CI/CD workflow changes that require careful manual review before merging.
+
+**Review Checklist**:
+- [ ] Review all workflow file changes
+- [ ] Verify security implications
+- [ ] Check for circular dependencies
+- [ ] Ensure proper permissions
+- [ ] Test rollback plan if needed
+
+**✅ Automated Validation Passed**:
+- YAML syntax validation
+- GitHub Actions schema validation
+- Security pattern scanning
+
+**🚨 IMPORTANT**: Only merge this PR after thorough manual review of all CI/CD changes."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
