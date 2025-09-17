@@ -512,6 +512,23 @@ def detect_emergency_release(commits):
 
 **CRITICAL**: CI/CD workflow changes require special handling to avoid infinite loops where workflows validate themselves.
 
+### Branch Strategy for Different Types of Changes
+
+**Use `ci-cd-maintenance` branch for:**
+- GitHub Actions workflows (`.github/workflows/*.yml`)
+- CI/CD configuration files
+- Infrastructure-as-code files
+- Security-sensitive automation
+- Scripts used by workflows (e.g., `scripts/analyze-version.py`)
+
+**Use feature/fix branches for:**
+- Application code changes (e.g., `markitdown_mcp/server.py`)
+- Test files (e.g., `tests/unit/*.py`)
+- Documentation updates
+- Configuration files that don't affect CI/CD
+
+**Rule of thumb**: If the change affects how CI/CD workflows run or could create validation loops, use `ci-cd-maintenance`. If it's regular code that gets validated by CI/CD, use a normal feature branch.
+
 ### When to Use CI/CD Maintenance Process
 
 Use the `ci-cd-maintenance` branch and process when making changes to:
@@ -519,6 +536,8 @@ Use the `ci-cd-maintenance` branch and process when making changes to:
 - CI/CD configuration files
 - Infrastructure-as-code files
 - Security-sensitive automation
+- Version analysis scripts (`scripts/analyze-version.py`)
+- Workflow dependencies and tools
 
 ### CI/CD Maintenance Workflow
 
