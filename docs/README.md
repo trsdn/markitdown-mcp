@@ -2,6 +2,8 @@
 
 This directory contains comprehensive documentation for the MarkItDown MCP server.
 
+<!-- Test comment to verify docs.yml workflow hashFiles function works correctly -->
+
 ## 📁 Documentation Structure
 
 ### `/api/`
