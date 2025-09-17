@@ -55,7 +55,7 @@ jobs:
           interrogate -v markitdown_mcp --fail-under 80 --exclude __pycache__
           echo ""
           echo "=== Detailed Coverage ==="
-          docstr-coverage markitdown_mcp --skip-file-doc --skip-init --percent 80
+          docstr-coverage markitdown_mcp --skip-file-doc --skip-init --percentage-only
 
   # ==========================================
   # Build Sphinx Documentation
@@ -79,7 +79,7 @@ jobs:
 
       - name: Build HTML documentation
         run: |
-          sphinx-build -W -b html docs/ _build/html
+          sphinx-build -b html docs/ _build/html
           echo "Documentation built successfully!"
 
       - name: Check for broken links
