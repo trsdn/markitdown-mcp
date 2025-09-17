@@ -104,9 +104,6 @@ MD030:
   ul_multi: 1
   ol_multi: 1
 
-# No HTML
-MD033: false  # Already configured above
-
 # Images should have alt text
 MD045: true
 
