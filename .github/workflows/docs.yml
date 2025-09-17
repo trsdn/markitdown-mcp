@@ -1,0 +1,262 @@
+name: Documentation CI
+on:
+  pull_request:
+    paths:
+      - '**.py'
+      - '**.md'
+      - '**.rst'
+      - 'docs/**'
+      - '.github/workflows/docs.yml'
+      - 'pyproject.toml'
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC for link rot detection
+
+permissions:
+  contents: read
+
+jobs:
+  # ==========================================
+  # Docstring Style and Coverage
+  # ==========================================
+  docstrings:
+    name: Docstring Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install docstring tools
+        run: |
+          pip install --upgrade pip
+          pip install pydocstyle interrogate docstr-coverage
+
+      - name: Check docstring style (PEP 257)
+        run: |
+          # Check main package
+          pydocstyle markitdown_mcp --convention=google --add-ignore=D100,D104
+          # Check tests for basic docstrings
+          pydocstyle tests --convention=google --add-ignore=D100,D101,D102,D103,D104 || true
+
+      - name: Check docstring coverage (fail if <80%)
+        run: |
+          echo "=== Docstring Coverage Report ==="
+          interrogate -v markitdown_mcp --fail-under 80 --exclude __pycache__
+          echo ""
+          echo "=== Detailed Coverage ==="
+          docstr-coverage markitdown_mcp --skip-file-doc --skip-init --percent 80
+
+  # ==========================================
+  # Build Sphinx Documentation
+  # ==========================================
+  build-sphinx:
+    name: Build Sphinx Docs
+    runs-on: ubuntu-latest
+    if: ${{ hashFiles('docs/conf.py') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install documentation dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[docs]" || pip install -e .
+          pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme myst-parser sphinx-copybutton
+
+      - name: Build HTML documentation
+        run: |
+          sphinx-build -W -b html docs/ _build/html
+          echo "Documentation built successfully!"
+
+      - name: Check for broken links
+        run: |
+          sphinx-build -b linkcheck docs/ _build/linkcheck || true
+
+      - name: Upload built documentation
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: documentation-html
+          path: _build/html/
+
+  # ==========================================
+  # Validate Links, Spelling, and Markdown
+  # ==========================================
+  links-spelling-markdown:
+    name: Links, Spelling & Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links in Markdown/HTML
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --timeout 20
+            --max-redirects 5
+            --exclude-mail
+            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply"
+            --exclude-path ".git|__pycache__|.pytest_cache"
+            "**/*.md"
+            "docs/**/*.rst"
+            "docs/**/*.html"
+          fail: true
+        continue-on-error: ${{ github.event_name == 'schedule' }}  # Don't fail scheduled runs
+
+      - name: Check spelling
+        uses: codespell-project/actions-codespell@v2
+        with:
+          check_filenames: true
+          ignore_words_list: "markitdown,mcp,jupyter,docx,pptx,xlsx,pdf,pypdf,onnx,griffe,pdoc,mkdocs,ba,te,fo,crate"
+          skip: ".git,__pycache__,.pytest_cache,*.pyc,*.pyo,*.egg-info,*.pdf,*.docx,*.pptx,*.xlsx"
+          exclude_file: .codespellignore
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v20
+        with:
+          config: .markdownlint.yml
+          globs: |
+            **/*.md
+            !node_modules
+            !.git
+            !__pycache__
+
+  # ==========================================
+  # Validate MCP Tool Documentation
+  # ==========================================
+  validate-mcp-docs:
+    name: Validate MCP Tool Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+
+      - name: Validate tool documentation matches implementation
+        run: |
+          python -c "
+          import json
+          import re
+          from pathlib import Path
+          from markitdown_mcp.server import MarkItDownMCPServer
+
+          # Get actual tools from server
+          server = MarkItDownMCPServer()
+          tools = server.get_tools()
+          tool_names = {tool['name'] for tool in tools}
+
+          print('=== MCP Tools Found ===')
+          for name in sorted(tool_names):
+              print(f'  - {name}')
+
+          # Check README mentions all tools
+          readme = Path('README.md').read_text()
+          missing_in_readme = []
+          for tool_name in tool_names:
+              if tool_name not in readme:
+                  missing_in_readme.append(tool_name)
+
+          if missing_in_readme:
+              print(f'\\n⚠️  Tools missing from README: {missing_in_readme}')
+              exit(1)
+
+          print('\\n✅ All tools documented in README')
+          "
+
+  # ==========================================
+  # Generate API Documentation Preview
+  # ==========================================
+  api-preview:
+    name: Generate API Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install pdoc
+        run: |
+          pip install --upgrade pip
+          pip install pdoc
+
+      - name: Generate API documentation preview
+        run: |
+          mkdir -p api-preview
+          pdoc --output-directory api-preview \
+                --template-dir .pdoc-templates \
+                --docformat google \
+                --no-show-source \
+                markitdown_mcp 2>/dev/null || \
+          pdoc --output-directory api-preview \
+                --docformat google \
+                markitdown_mcp
+
+      - name: Upload API preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation-preview
+          path: api-preview/
+
+  # ==========================================
+  # Documentation Coverage Report
+  # ==========================================
+  coverage-report:
+    name: Documentation Coverage Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [docstrings, links-spelling-markdown]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install tools
+        run: |
+          pip install --upgrade pip
+          pip install interrogate
+
+      - name: Generate coverage badge
+        run: |
+          interrogate --generate-badge docs/coverage-badge.svg markitdown_mcp
+
+      - name: Create coverage report comment
+        run: |
+          echo "## 📚 Documentation Coverage Report" > coverage-report.md
+          echo "" >> coverage-report.md
+          interrogate markitdown_mcp -v 2>&1 | tail -n +2 >> coverage-report.md
+          echo "" >> coverage-report.md
+          echo "---" >> coverage-report.md
+          echo "_Generated for commit ${{ github.sha }}_" >> coverage-report.md
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-coverage-report
+          path: |
+            coverage-report.md
+            docs/coverage-badge.svg

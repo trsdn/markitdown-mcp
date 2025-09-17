@@ -688,6 +688,35 @@ class MCPResponse:
 
 
 class MarkItDownMCPServer:
+    """
+    Model Context Protocol (MCP) server for document to Markdown conversion.
+
+    This server implements the MCP protocol to expose document conversion
+    capabilities via the MarkItDown library. It provides secure, rate-limited
+    access to convert various file formats to Markdown.
+
+    Features:
+        - Convert individual files to Markdown
+        - Batch convert directories
+        - List supported file formats
+        - Security protections (path validation, timeouts, size limits)
+        - MCP protocol compliance
+
+    Attributes:
+        markitdown: Instance of the MarkItDown converter
+        supported_extensions: Set of supported file extensions
+        safe_directories: List of allowed working directories
+
+    Example:
+        >>> server = MarkItDownMCPServer()
+        >>> request = MCPRequest(
+        ...     id="123",
+        ...     method="tools/list",
+        ...     params={}
+        ... )
+        >>> response = await server.handle_request(request)
+    """
+
     def __init__(self) -> None:
         self.markitdown = MarkItDown()
         self.supported_extensions = {

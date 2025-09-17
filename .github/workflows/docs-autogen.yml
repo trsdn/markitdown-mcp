@@ -1,0 +1,295 @@
+name: Auto-Generate Documentation
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'What to generate'
+        required: true
+        default: 'api'
+        type: choice
+        options:
+          - api
+          - all
+          - missing
+  schedule:
+    - cron: '0 3 1 * *'  # Monthly on the 1st at 3 AM UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ==========================================
+  # Check What Documentation is Missing
+  # ==========================================
+  check-missing:
+    name: Check Missing Documentation
+    runs-on: ubuntu-latest
+    outputs:
+      needs-api: ${{ steps.check.outputs.needs-api }}
+      needs-tools: ${{ steps.check.outputs.needs-tools }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install interrogate
+
+      - name: Check documentation coverage
+        id: check
+        run: |
+          echo "=== Checking Documentation Coverage ==="
+
+          # Check API docs coverage
+          coverage=$(interrogate markitdown_mcp --quiet 2>/dev/null | grep -o '[0-9.]*%' | sed 's/%//')
+          echo "Current coverage: ${coverage}%"
+
+          if (( $(echo "$coverage < 100" | bc -l) )); then
+            echo "needs-api=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs-api=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if tool docs exist
+          if [[ ! -f "docs/api/tools.md" ]]; then
+            echo "needs-tools=true" >> $GITHUB_OUTPUT
+          else
+            echo "needs-tools=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ==========================================
+  # Generate API Documentation
+  # ==========================================
+  generate-api-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    needs: check-missing
+    if: needs.check-missing.outputs.needs-api == 'true' || github.event.inputs.target == 'api' || github.event.inputs.target == 'all'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install pdoc griffe
+
+      - name: Generate API documentation with pdoc
+        run: |
+          mkdir -p docs/api/generated
+
+          # Generate Markdown API docs
+          pdoc --output-directory docs/api/generated \
+               --format md \
+               --template-dir .pdoc-templates \
+               --docformat google \
+               markitdown_mcp 2>/dev/null || \
+          pdoc --output-directory docs/api/generated \
+               --format md \
+               --docformat google \
+               markitdown_mcp
+
+          echo "=== Generated API Documentation ==="
+          ls -la docs/api/generated/
+
+      - name: Generate tool documentation
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          from markitdown_mcp.server import MarkItDownMCPServer
+
+          server = MarkItDownMCPServer()
+          tools = server.get_tools()
+
+          # Generate Markdown documentation for tools
+          output = []
+          output.append('# MCP Tools Documentation')
+          output.append('')
+          output.append('Auto-generated documentation for MCP tools.')
+          output.append('')
+
+          for tool in tools:
+              output.append(f\"## {tool['name']}\")
+              output.append('')
+              output.append(f\"{tool['description']}\")
+              output.append('')
+              output.append('### Input Schema')
+              output.append('')
+              output.append('```json')
+              output.append(json.dumps(tool['inputSchema'], indent=2))
+              output.append('```')
+              output.append('')
+
+          # Write to file
+          tools_doc = Path('docs/api/tools-generated.md')
+          tools_doc.write_text('\\n'.join(output))
+
+          print(f'Generated {tools_doc}')
+          "
+
+      - name: Generate MCP protocol documentation
+        run: |
+          python -c "
+          from pathlib import Path
+          import inspect
+          from markitdown_mcp.server import MCPRequest, MCPResponse, MarkItDownMCPServer
+
+          output = []
+          output.append('# MCP Protocol Implementation')
+          output.append('')
+          output.append('Auto-generated protocol documentation.')
+          output.append('')
+
+          # Document request/response types
+          output.append('## Request Format')
+          output.append('')
+          output.append('```python')
+          output.append(inspect.getsource(MCPRequest))
+          output.append('```')
+          output.append('')
+
+          output.append('## Response Format')
+          output.append('')
+          output.append('```python')
+          output.append(inspect.getsource(MCPResponse))
+          output.append('```')
+          output.append('')
+
+          # Document available methods
+          server = MarkItDownMCPServer()
+          output.append('## Available Methods')
+          output.append('')
+
+          methods = ['initialize', 'tools/list', 'tools/call']
+          for method in methods:
+              output.append(f'- `{method}`')
+
+          Path('docs/api/protocol-generated.md').write_text('\\n'.join(output))
+          print('Generated protocol documentation')
+          "
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: docs/auto-generate-api
+          title: "📚 Auto-generate missing API documentation"
+          commit-message: "docs: auto-generate API documentation"
+          body: |
+            ## 🤖 Auto-Generated Documentation
+
+            This PR contains auto-generated documentation for:
+            - API reference from docstrings
+            - MCP tool schemas
+            - Protocol implementation details
+
+            ### Generated Files
+            - `docs/api/generated/` - API reference from pdoc
+            - `docs/api/tools-generated.md` - Tool documentation
+            - `docs/api/protocol-generated.md` - Protocol documentation
+
+            ### Next Steps
+            1. Review the generated documentation
+            2. Move relevant sections to permanent locations
+            3. Add any missing context or examples
+            4. Delete the `-generated` suffix from finalized files
+
+            ---
+            _Generated by GitHub Actions workflow_
+          labels: |
+            documentation
+            auto-generated
+          draft: true
+
+  # ==========================================
+  # Generate Skeleton Documentation
+  # ==========================================
+  generate-skeleton:
+    name: Generate Documentation Skeleton
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'missing'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+
+      - name: Generate missing documentation stubs
+        run: |
+          python -c "
+          import ast
+          import inspect
+          from pathlib import Path
+          from markitdown_mcp import server
+
+          # Find all public functions without docstrings
+          missing_docs = []
+
+          for name, obj in inspect.getmembers(server):
+              if inspect.isfunction(obj) or inspect.isclass(obj):
+                  if not name.startswith('_') and not obj.__doc__:
+                      missing_docs.append((name, obj))
+
+          if missing_docs:
+              print(f'Found {len(missing_docs)} items without docstrings:')
+              for name, _ in missing_docs:
+                  print(f'  - {name}')
+
+              # Generate stub documentation
+              output = []
+              output.append('# Missing Documentation Stubs')
+              output.append('')
+              output.append('Add these docstrings to the source code:')
+              output.append('')
+
+              for name, obj in missing_docs:
+                  output.append(f'## {name}')
+                  output.append('')
+                  output.append('```python')
+                  output.append(f'def {name}(...):')
+                  output.append('    \"\"\"')
+                  output.append('    TODO: Add description here.')
+                  output.append('    ')
+                  output.append('    Args:')
+                  output.append('        TODO: Document arguments')
+                  output.append('    ')
+                  output.append('    Returns:')
+                  output.append('        TODO: Document return value')
+                  output.append('    \"\"\"')
+                  output.append('```')
+                  output.append('')
+
+              Path('docs/missing-docs-stubs.md').write_text('\\n'.join(output))
+              print('Generated documentation stubs')
+          else:
+              print('All public APIs have docstrings!')
+          "
+
+      - name: Create issue for missing docs
+        if: success()
+        uses: peter-evans/create-issue-from-file@v4
+        with:
+          title: "📚 Missing Documentation Report"
+          content-filepath: docs/missing-docs-stubs.md
+          labels: |
+            documentation
+            good first issue

@@ -1,0 +1,156 @@
+# Markdown linting rules for markitdown-mcp
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Default state for all rules
+default: true
+
+# Line length
+MD013:
+  # Allow long lines in code blocks and tables
+  code_blocks: false
+  tables: false
+  # Set maximum line length
+  line_length: 120
+  # Allow long lines in headings
+  heading_line_length: 120
+
+# Heading style - use ATX style (# Heading)
+MD003:
+  style: atx
+
+# Unordered list style - use dashes
+MD004:
+  style: dash
+
+# List indentation - 2 spaces
+MD007:
+  indent: 2
+
+# No trailing spaces
+MD009: true
+
+# No hard tabs
+MD010:
+  code_blocks: false
+
+# No reversed link syntax
+MD011: true
+
+# No multiple blank lines
+MD012:
+  maximum: 2
+
+# Line length already configured above
+# MD013: configured above
+
+# No dollar signs before commands (use code blocks instead)
+MD014: true
+
+# Headers must increment by one level
+MD001: true
+
+# First line must be a top-level header
+MD041: true
+
+# No empty links
+MD042: true
+
+# Required heading structure
+MD043: false
+
+# Proper code fence style
+MD046:
+  style: fenced
+
+# Code fence language must be specified
+MD040: true
+
+# Lists should be surrounded by blank lines
+MD032: true
+
+# No inline HTML
+MD033:
+  allowed_elements: [br, sub, sup, kbd]
+
+# No bare URLs
+MD034: true
+
+# Horizontal rule style
+MD035:
+  style: "---"
+
+# Emphasis style - use underscores
+MD036: false  # Allow bold/emphasis at start of lines
+
+# No spaces inside emphasis markers
+MD037: true
+
+# No spaces in code spans
+MD038: true
+
+# No spaces inside link text
+MD039: true
+
+# Fenced code blocks should be surrounded by blank lines
+MD031: true
+
+# Lists nested correctly
+MD029: true
+
+# List marker space - 1 space after marker
+MD030:
+  ul_single: 1
+  ol_single: 1
+  ul_multi: 1
+  ol_multi: 1
+
+# No HTML
+MD033: false  # Already configured above
+
+# Images should have alt text
+MD045: true
+
+# Proper spacing in ATX headers
+MD018: true
+MD019: true
+MD020: true
+MD021: true
+
+# Headers should not be closed
+MD022: false  # Allow closed ATX headers
+
+# Headers must start at beginning of line
+MD023: true
+
+# No duplicate headers at same level
+MD024:
+  siblings_only: true
+
+# Single H1 in document
+MD025: true
+
+# No trailing punctuation in headers
+MD026:
+  punctuation: ".,;:!?。，；：！？"
+
+# No multiple spaces after blockquote symbol
+MD027: true
+
+# No blank lines inside blockquotes
+MD028: false
+
+# Ordered list prefix
+MD029:
+  style: one_or_ordered
+
+# Definition terms must be unique
+MD052: true
+
+# Link and image reference definitions need labels
+MD053: true
+
+# No spaces in link labels
+MD054: false
+
+# Allow duplicate link labels (for consistency)
+MD055: false

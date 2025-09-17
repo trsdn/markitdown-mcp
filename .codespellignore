@@ -1,0 +1,104 @@
+# Codespell ignore file for markitdown-mcp
+# Words that should not be flagged as spelling errors
+
+# Project-specific terms
+markitdown
+mcp
+MarkItDown
+MCP
+
+# Technical terms
+jupyter
+docx
+pptx
+xlsx
+pypdf
+pdf
+onnx
+onnxruntime
+griffe
+pdoc
+mkdocs
+mkdocstrings
+autodoc
+docstrings
+typehints
+
+# Common abbreviations in code
+ba
+te
+fo
+crate
+ser
+nd
+nin
+teh
+thru
+
+# File format extensions
+html
+xml
+json
+csv
+yaml
+yml
+toml
+rst
+md
+
+# Python-specific
+pytest
+asyncio
+mypy
+flake8
+isort
+pyproject
+pydantic
+setuptools
+
+# Security-related terms
+xxe
+dos
+csrf
+xss
+lfi
+rfi
+ssrf
+
+# Cloud/Service terms
+github
+gitlab
+bitbucket
+aws
+gcp
+azure
+
+# Encoding terms
+utf8
+utf-8
+latin1
+cp1252
+ascii
+
+# Other technical terms
+repo
+repos
+config
+configs
+env
+stdin
+stdout
+stderr
+charset
+mimetype
+mimetypes
+symlink
+symlinks
+filesystem
+subprocess
+multiprocess
+traceback
+stacktrace
+referer
+cancelled
+centre

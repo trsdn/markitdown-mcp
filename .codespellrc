@@ -1,0 +1,29 @@
+[codespell]
+# Codespell configuration for markitdown-mcp
+
+# Skip these files and directories
+skip = .git,__pycache__,.pytest_cache,*.pyc,*.pyo,*.egg-info,*.pdf,*.docx,*.pptx,*.xlsx,*.png,*.jpg,*.jpeg,*.gif,*.svg,*.ico,node_modules,venv,env,.env,.venv,build,dist,_build,.tox,.mypy_cache,.coverage,htmlcov,*.min.js,*.min.css
+
+# Check file names as well as contents
+check-filenames = true
+
+# Check hidden files (starting with .)
+check-hidden = false
+
+# Ignore words file
+ignore-words = .codespellignore
+
+# Don't ignore case
+ignore-case = false
+
+# Interactive mode - set to 0 for CI
+interactive = 0
+
+# Quiet level (0-3, higher is quieter)
+quiet-level = 1
+
+# Count the number of errors
+count = true
+
+# Use colors in output
+color = true
