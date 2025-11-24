@@ -1,16 +1,18 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "markitdown-mcp"
-version = "1.1.0"
+version = "1.2.0"
 description = "A Model Context Protocol server for converting documents to Markdown using MarkItDown"
 authors = [
-    {name = "MarkItDown MCP", email = "noreply@example.com"}
+    { name = "MarkItDown MCP", email = "noreply@example.com" },
 ]
 readme = "README.md"
-license = {text = "MIT"}
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -23,8 +25,13 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["mcp", "markitdown", "markdown", "document-conversion", "model-context-protocol"]
-
+keywords = [
+    "mcp",
+    "markitdown",
+    "markdown",
+    "document-conversion",
+    "model-context-protocol",
+]
 dependencies = [
     "markitdown>=0.1.0",
     "pypdf>=3.17.0",
@@ -34,6 +41,9 @@ dependencies = [
     "pdf2image>=1.16.3",
     "python-dotenv>=1.0.0",
 ]
+
+[project.license]
+text = "MIT"
 
 [project.optional-dependencies]
 all = [
@@ -89,63 +99,79 @@ Issues = "https://github.com/trsdn/markitdown-mcp/issues"
 markitdown-mcp = "markitdown_mcp.server:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["markitdown_mcp*"]
+where = [
+    ".",
+]
+include = [
+    "markitdown_mcp*",
+]
 
 [tool.setuptools.package-data]
-markitdown_mcp = ["*.json"]
+markitdown_mcp = [
+    "*.json",
+]
 
 [tool.black]
 line-length = 100
-target-version = ['py38']
+target-version = [
+    "py38",
+]
 
 [tool.isort]
 profile = "black"
 line_length = 100
 
 [tool.ruff]
-# Ruff configuration for markitdown-mcp
 target-version = "py310"
 line-length = 100
 
 [tool.ruff.lint]
 select = [
-    "E",      # pycodestyle errors
-    "W",      # pycodestyle warnings
-    "F",      # pyflakes
-    "I",      # isort
-    "B",      # flake8-bugbear
-    "C4",     # flake8-comprehensions
-    "UP",     # pyupgrade
-    "ARG",    # flake8-unused-arguments
-    "SIM",    # flake8-simplify
-    "TCH",    # flake8-type-checking
-    "DTZ",    # flake8-datetimez
-    "ERA",    # eradicate
-    "PTH",    # flake8-use-pathlib
-    "RSE",    # flake8-raise
-    "RET",    # flake8-return
-    "RUF",    # Ruff-specific rules
-    "S",      # bandit security checks
-    "N",      # pep8-naming
-    "PIE",    # flake8-pie
-    "PT",     # flake8-pytest-style
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "ARG",
+    "SIM",
+    "TCH",
+    "DTZ",
+    "ERA",
+    "PTH",
+    "RSE",
+    "RET",
+    "RUF",
+    "S",
+    "N",
+    "PIE",
+    "PT",
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
-    "B008",   # do not perform function calls in argument defaults
-    "C901",   # too complex
-    "S101",   # assert used (common in tests)
-    "S603",   # subprocess without shell=True is ok
-    "S607",   # start process with partial path is ok
+    "E501",
+    "B008",
+    "C901",
+    "S101",
+    "S603",
+    "S607",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101", "ARG001", "PLR2004"]
-"docs/*" = ["E402", "I001"]
+"tests/*" = [
+    "S101",
+    "ARG001",
+    "PLR2004",
+]
+"docs/*" = [
+    "E402",
+    "I001",
+]
 
 [tool.ruff.lint.isort]
-known-first-party = ["markitdown_mcp"]
+known-first-party = [
+    "markitdown_mcp",
+]
 combine-as-imports = true
 
 [tool.ruff.lint.flake8-pytest-style]
