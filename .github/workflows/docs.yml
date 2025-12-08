@@ -95,11 +95,11 @@ jobs:
       - name: Check links in Markdown/HTML
         uses: lycheeverse/lychee-action@v2
         with:
-          args: >-
+          args: >
             --no-progress
             --timeout 20
             --max-redirects 5
-            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply|mailto:|claude.ai|spec.modelcontextprotocol.io"
+            --exclude "localhost|127.0.0.1|example.com|your-.*|noreply|mailto:|claude.ai"
             --exclude-path ".git|__pycache__|.pytest_cache"
             "**/*.md"
             "docs/**/*.rst"

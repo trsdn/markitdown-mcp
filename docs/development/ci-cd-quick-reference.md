@@ -201,5 +201,5 @@ semgrep --config=auto markitdown_mcp/
 - [GitHub Actions Docs](https://docs.github.com/en/actions)
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Semantic Versioning](https://semver.org/)
-- [MCP Specification](https://spec.modelcontextprotocol.io/)
+- [MCP Specification](https://modelcontextprotocol.io/specification/)
 - [Python Testing Best Practices](https://docs.pytest.org/)
