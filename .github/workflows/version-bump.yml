@@ -97,6 +97,8 @@ jobs:
 
       - name: Check for existing version bump PRs
         id: check-existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Check if there are any open version-bump PRs
           EXISTING_PRS=$(gh pr list --search "is:open head:version-bump/" --json number,headRefName --jq length)
