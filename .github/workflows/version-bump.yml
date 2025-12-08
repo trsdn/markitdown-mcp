@@ -1,5 +1,17 @@
 name: Automated Version Bump
 
+# This workflow automatically creates version bump PRs based on conventional commits.
+#
+# DUPLICATE PREVENTION:
+# - Automatically checks for existing version-bump PRs before creating new ones
+# - Manual triggering is prevented if open version-bump PRs exist
+# - Use 'override_check: true' only if you need to force creation despite existing PRs
+#
+# TRIGGERS:
+# - Automatic: Push to main (if changes warrant a version bump)
+# - Scheduled: Weekly on Mondays at 9 AM UTC
+# - Manual: workflow_dispatch (with duplicate prevention)
+
 on:
   push:
     branches: [main]
@@ -9,12 +21,12 @@ on:
   workflow_dispatch:
     inputs:
       force_bump:
-        description: 'Force version bump even if no significant changes'
+        description: '⚠️ Force version bump even if no significant changes'
         required: false
         default: false
         type: boolean
       bump_type:
-        description: 'Override automatic version detection'
+        description: 'Override automatic version detection (usually use "auto")'
         required: false
         default: 'auto'
         type: choice
@@ -23,6 +35,11 @@ on:
           - patch
           - minor
           - major
+      override_check:
+        description: '🚨 Override existing PR check - ONLY if you need to create duplicate PR'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -77,6 +94,25 @@ jobs:
       - name: Install dependencies
         run: |
           pip install tomli_w
+
+      - name: Check for existing version bump PRs
+        id: check-existing
+        run: |
+          # Check if there are any open version-bump PRs
+          EXISTING_PRS=$(gh pr list --search "is:open head:version-bump/" --json number,headRefName --jq length)
+
+          if [ "$EXISTING_PRS" -gt 0 ] && [ "${{ inputs.override_check }}" != "true" ]; then
+            echo "❌ Found $EXISTING_PRS existing version bump PR(s)"
+            gh pr list --search "is:open head:version-bump/" --json number,title,headRefName
+            echo ""
+            echo "💡 To override this check, manually trigger with 'override_check: true'"
+            echo "❌ Aborting to prevent duplicate version bump PRs"
+            exit 1
+          elif [ "$EXISTING_PRS" -gt 0 ]; then
+            echo "⚠️  Found existing PRs but override_check=true, continuing..."
+          else
+            echo "✅ No existing version bump PRs found, proceeding..."
+          fi
 
       - name: Create version bump branch
         run: |
