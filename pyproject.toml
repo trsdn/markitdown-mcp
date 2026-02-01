@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "markitdown-mcp"
-version = "1.2.0"
+version = "1.2.1"
 description = "A Model Context Protocol server for converting documents to Markdown using MarkItDown"
 authors = [
     { name = "MarkItDown MCP", email = "noreply@example.com" },
