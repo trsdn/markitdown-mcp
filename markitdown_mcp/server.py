@@ -1289,6 +1289,14 @@ class MarkItDownMCPServer:
 
 def main() -> None:
     """Main entry point for console script."""
+    # Force UTF-8 + LF on stdio. Python's text-mode defaults on Windows are
+    # cp1252 for stdin/stdout and CRLF translation on stdout, both of which
+    # break the MCP protocol: clients send UTF-8 JSON-RPC framed by LF, so
+    # cp1252 stdin corrupts non-ASCII input (e.g. path names with umlauts)
+    # and CRLF stdout corrupts the line-delimited framing. No-op on platforms
+    # that already default to UTF-8/LF.
+    sys.stdout.reconfigure(encoding="utf-8", newline="\n")
+    sys.stdin.reconfigure(encoding="utf-8")
 
     async def run_server() -> None:
         """Run the MCP server asynchronously."""
