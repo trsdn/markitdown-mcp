@@ -673,7 +673,8 @@ def get_safe_working_directories() -> list[str]:
 class MCPRequest:
     """Represents an incoming MCP protocol request."""
 
-    id: str
+    # JSON-RPC 2.0: id may be str, int, or absent (notification → None here).
+    id: str | int | None
     method: str
     params: dict[str, Any]
 
@@ -682,7 +683,7 @@ class MCPRequest:
 class MCPResponse:
     """Represents an MCP protocol response."""
 
-    id: str
+    id: str | int | None
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
 
@@ -1268,13 +1269,21 @@ class MarkItDownMCPServer:
 
                 try:
                     message = json.loads(line.strip())
+
+                    # JSON-RPC 2.0 §4.1: messages without "id" are notifications;
+                    # the server MUST NOT reply to them.
+                    is_notification = "id" not in message
+
                     request = MCPRequest(
-                        id=message.get("id", "unknown"),
+                        id=message.get("id"),
                         method=message["method"],
                         params=message.get("params", {}),
                     )
 
                     response = await self.handle_request(request)
+
+                    if is_notification:
+                        continue
 
                     # Send response
                     response_dict: dict[str, Any] = {"jsonrpc": "2.0", "id": response.id}
