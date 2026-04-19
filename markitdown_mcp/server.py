@@ -768,7 +768,11 @@ class MarkItDownMCPServer:
         return [
             {
                 "name": "convert_file",
-                "description": "Convert a file to Markdown using MarkItDown",
+                "description": (
+                    "Convert a file to Markdown using MarkItDown. "
+                    "Provide either 'file_path' OR both 'file_content' (base64) "
+                    "and 'filename'."
+                ),
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -787,10 +791,6 @@ class MarkItDownMCPServer:
                             "description": "Original filename when using file_content",
                         },
                     },
-                    "anyOf": [
-                        {"required": ["file_path"]},
-                        {"required": ["file_content", "filename"]},
-                    ],
                 },
             },
             {
@@ -838,7 +838,11 @@ class MarkItDownMCPServer:
                         "tools": [
                             {
                                 "name": "convert_file",
-                                "description": "Convert a file to Markdown using MarkItDown",
+                                "description": (
+                                    "Convert a file to Markdown using MarkItDown. "
+                                    "Provide either 'file_path' OR both "
+                                    "'file_content' (base64) and 'filename'."
+                                ),
                                 "inputSchema": {
                                     "type": "object",
                                     "properties": {
@@ -859,10 +863,6 @@ class MarkItDownMCPServer:
                                             "file_content",
                                         },
                                     },
-                                    "anyOf": [
-                                        {"required": ["file_path"]},
-                                        {"required": ["file_content", "filename"]},
-                                    ],
                                 },
                             },
                             {
