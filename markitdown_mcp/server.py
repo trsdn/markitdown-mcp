@@ -640,13 +640,22 @@ def get_safe_working_directories() -> list[str]:
     # Add current working directory
     safe_dirs.append(str(Path.cwd()))
 
-    # Add home directory subdirectories (but not root directories)
-    home = Path.home()
-    safe_subdirs = ["Documents", "Downloads", "Desktop", "tmp"]
-    for subdir in safe_subdirs:
-        potential_dir = home / subdir
-        if potential_dir.exists():
-            safe_dirs.append(str(potential_dir))
+    # Home directory subdirectories. Path.home() raises RuntimeError if neither
+    # HOME nor USERPROFILE is set, which can happen when MCP clients spawn the
+    # server with an empty environment. Fall back gracefully rather than
+    # crashing the server at init.
+    try:
+        home = Path.home()
+    except RuntimeError:
+        logger.warning("Could not determine user home; skipping home subdirs")
+        home = None
+
+    if home is not None:
+        safe_subdirs = ["Documents", "Downloads", "Desktop", "tmp"]
+        for subdir in safe_subdirs:
+            potential_dir = home / subdir
+            if potential_dir.exists():
+                safe_dirs.append(str(potential_dir))
 
     # Add temp directories
     temp_dir = Path(tempfile.gettempdir())
