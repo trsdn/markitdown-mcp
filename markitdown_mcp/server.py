@@ -657,6 +657,24 @@ def get_safe_working_directories() -> list[str]:
     if fixtures_dir.exists():
         safe_dirs.append(str(fixtures_dir))
 
+    # User-configured additional safe directories (os.pathsep separated).
+    # Example (Windows): MARKITDOWN_SAFE_DIRS="D:\OneDrive;D:\Projects"
+    # Example (Unix):    MARKITDOWN_SAFE_DIRS="/mnt/nas:/srv/data"
+    extra = os.environ.get("MARKITDOWN_SAFE_DIRS", "")
+    if extra:
+        for entry in extra.split(os.pathsep):
+            entry = entry.strip().strip('"')
+            if not entry:
+                continue
+            p = Path(entry)
+            if p.exists():
+                safe_dirs.append(str(p.resolve()))
+            else:
+                logger.warning(
+                    "MARKITDOWN_SAFE_DIRS entry does not exist, ignoring: %s",
+                    entry,
+                )
+
     return safe_dirs
 
 
