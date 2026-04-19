@@ -29,6 +29,14 @@ from markitdown import MarkItDown
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("markitdown-mcp")
 
+# Exact MIME types for format-specific security validation. A substring check
+# like `"xml" in mime_type` incorrectly matches Office OpenXML formats (docx,
+# xlsx, pptx — whose MIME contains "openxmlformats") and routes them through
+# the XML sanitizer, corrupting the binary payload.
+_XML_MIME_TYPES = {"text/xml", "application/xml"}
+_JSON_MIME_TYPES = {"application/json", "text/json"}
+_CSV_MIME_TYPES = {"text/csv", "application/csv"}
+
 
 class SecurityError(Exception):
     """Raised when a security violation is detected."""
@@ -281,12 +289,13 @@ def validate_file_content_security(file_path: str) -> str:
         mime_type, _ = mimetypes.guess_type(file_path)
         file_ext = Path(file_path).suffix.lower()
 
-        # Apply format-specific validation
-        if (mime_type and "xml" in mime_type) or file_ext in [".xml", ".xhtml"]:
+        # Apply format-specific validation. Use exact MIME-type matching to
+        # avoid false positives (e.g. docx MIME contains "xml" as substring).
+        if (mime_type in _XML_MIME_TYPES) or file_ext in [".xml", ".xhtml"]:
             return validate_xml_security(file_path)
-        if (mime_type and "json" in mime_type) or file_ext == ".json":
+        if (mime_type in _JSON_MIME_TYPES) or file_ext == ".json":
             return validate_json_security(file_path)
-        if (mime_type and "csv" in mime_type) or file_ext == ".csv":
+        if (mime_type in _CSV_MIME_TYPES) or file_ext == ".csv":
             return validate_csv_security(file_path)
 
         # General file size check
