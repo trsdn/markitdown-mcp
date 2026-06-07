@@ -282,7 +282,16 @@ def validate_file_content_security(file_path: str) -> str:
         file_ext = Path(file_path).suffix.lower()
 
         # Apply format-specific validation
-        if (mime_type and "xml" in mime_type) or file_ext in [".xml", ".xhtml"]:
+        # NOTE: Office Open XML files (.docx/.xlsx/.pptx) are ZIP archives whose
+        # MIME type contains the substring "xml" ("openxmlformats..."). They must
+        # NOT be routed through the text-based XML sanitizer, which would read the
+        # binary ZIP as UTF-8 and corrupt it (-> BadZipFile). Gate on the real
+        # extension / exact XML MIME types and exclude ZIP-based office formats.
+        office_zip_exts = {".docx", ".xlsx", ".pptx", ".xlsm", ".docm", ".pptm", ".epub", ".zip"}
+        is_xml = file_ext in [".xml", ".xhtml"] or (
+            mime_type in ("application/xml", "text/xml", "application/xhtml+xml")
+        )
+        if is_xml and file_ext not in office_zip_exts:
             return validate_xml_security(file_path)
         if (mime_type and "json" in mime_type) or file_ext == ".json":
             return validate_json_security(file_path)
@@ -1028,9 +1037,14 @@ class MarkItDownMCPServer:
                 )
 
         except Exception as e:
-            logger.error(f"Error in convert_file_tool: {e}")
-            # Sanitize error message to prevent information disclosure
+            # Always log the full traceback server-side so the underlying cause
+            # (e.g. BadZipFile, FileConversionException) is recoverable from logs
+            # instead of being swallowed by a generic message.
+            logger.exception("Error in convert_file_tool")
             error_str = str(e).lower()
+            # Keep sanitization for cases that may leak sensitive filesystem
+            # details; otherwise surface the real error type and message so
+            # callers can actually diagnose conversion failures.
             if (
                 "permission denied" in error_str
                 or "access denied" in error_str
@@ -1048,7 +1062,7 @@ class MarkItDownMCPServer:
                     "extras (e.g., markitdown[pdf])"
                 )
             else:
-                safe_message = "Conversion failed"
+                safe_message = f"Conversion failed ({type(e).__name__}): {e!s}"
 
             return MCPResponse(id=request_id, error={"code": -32603, "message": safe_message})
 
