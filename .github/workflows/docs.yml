@@ -194,10 +194,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install pdoc
+      - name: Install documentation dependencies
         run: |
           pip install --upgrade pip
-          pip install pdoc
+          pip install -e ".[docs]"
 
       - name: Generate API documentation preview
         run: |
