@@ -3,9 +3,13 @@ name: Dependency Review
 on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-  # Also run on Dependabot PRs
-  pull_request_target:
-    branches-ignore: [ci-cd-maintenance]
+    paths:
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '**/requirements*.txt'
+      - '**/poetry.lock'
+      - '**/Pipfile.lock'
+      - '.github/workflows/dependency-review.yml'
 
 permissions:
   contents: read

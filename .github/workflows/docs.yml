@@ -2,10 +2,15 @@ name: Documentation CI
 on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
+    paths:
+      - '**/*.py'
+      - 'docs/**'
+      - '**/*.md'
+      - '**/*.rst'
+      - 'pyproject.toml'
+      - '.github/workflows/docs.yml'
   push:
     branches: [main]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC for link rot detection
 
 permissions:
   contents: read

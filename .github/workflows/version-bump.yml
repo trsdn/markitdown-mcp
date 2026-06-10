@@ -9,15 +9,11 @@ name: Automated Version Bump
 #
 # TRIGGERS:
 # - Automatic: Push to main (if changes warrant a version bump)
-# - Scheduled: Weekly on Mondays at 9 AM UTC
 # - Manual: workflow_dispatch (with duplicate prevention)
 
 on:
   push:
     branches: [main]
-  schedule:
-    # Run weekly on Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
   workflow_dispatch:
     inputs:
       force_bump:

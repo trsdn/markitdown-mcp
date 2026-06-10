@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches-ignore: [ci-cd-maintenance]
+    paths:
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/ci.yml'
 
 # Cancel duplicate runs
 concurrency:
