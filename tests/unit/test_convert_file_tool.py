@@ -3,12 +3,19 @@ Unit tests for the convert_file MCP tool
 """
 
 import base64
+import os
+import zipfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
 
-from markitdown_mcp.server import MarkItDownMCPServer, MCPRequest
+from markitdown_mcp.server import (
+    MarkItDownMCPServer,
+    MCPRequest,
+    get_safe_working_directories,
+    validate_file_content_security,
+)
 from tests.helpers.assertions import (
     assert_convert_file_response,
     assert_mcp_error_response,
@@ -17,7 +24,9 @@ from tests.helpers.assertions import (
 from tests.helpers.file_utils import (
     create_corrupted_file,
     create_large_file,
+    create_minimal_docx,
     create_minimal_pdf,
+    create_minimal_xlsx,
     create_test_file,
 )
 
@@ -77,6 +86,37 @@ class TestConvertFileBasicFunctionality:
 
         content_text = response.result["content"][0]["text"]
         assert "Name,Age,City" in content_text or "John Doe" in content_text
+
+    @pytest.mark.unit
+    def test_ooxml_files_are_not_routed_through_xml_sanitizer(self, temp_dir):
+        """DOCX/XLSX files are ZIP containers even though their MIME type contains xml."""
+        docx_path = create_minimal_docx(temp_dir)
+        xlsx_path = create_minimal_xlsx(temp_dir)
+
+        for file_path in [docx_path, xlsx_path]:
+            assert zipfile.is_zipfile(file_path)
+            validated_path = validate_file_content_security(file_path)
+            assert validated_path == file_path
+            assert zipfile.is_zipfile(validated_path)
+
+    @pytest.mark.unit
+    def test_markitdown_safe_dirs_env_adds_absolute_existing_directories(
+        self, monkeypatch, temp_dir
+    ):
+        """MARKITDOWN_SAFE_DIRS extends the operator-controlled safe directory list."""
+        extra_dir = Path(temp_dir) / "extra-safe-dir"
+        extra_dir.mkdir()
+        missing_dir = Path(temp_dir) / "missing"
+        monkeypatch.setenv(
+            "MARKITDOWN_SAFE_DIRS",
+            os.pathsep.join([str(extra_dir), str(missing_dir), "relative-dir"]),
+        )
+
+        safe_dirs = get_safe_working_directories()
+
+        assert str(extra_dir.resolve()) in safe_dirs
+        assert str(missing_dir.resolve()) not in safe_dirs
+        assert "relative-dir" not in safe_dirs
 
 
 class TestConvertFileBase64Content:
@@ -311,18 +351,11 @@ class TestConvertFileFormats:
 
     @pytest.mark.unit
     @pytest.mark.parametrize(
-        "file_extension,content_type",
-        [
-            (".txt", "text/plain"),
-            (".json", "application/json"),
-            (".csv", "text/csv"),
-            (".html", "text/html"),
-            (".xml", "application/xml"),
-            (".md", "text/markdown"),
-        ],
+        ("file_extension"),
+        [".txt", ".json", ".csv", ".html", ".xml", ".md"],
     )
     @pytest.mark.asyncio
-    async def test_supported_text_formats(self, mcp_server, temp_dir, file_extension, content_type):
+    async def test_supported_text_formats(self, mcp_server, temp_dir, file_extension):
         """Test conversion of various supported text formats."""
         content_map = {
             ".txt": "Plain text content",
@@ -479,9 +512,7 @@ class TestConvertFileWithMocking:
     @pytest.mark.unit
     @patch("markitdown_mcp.server.MarkItDown")
     @pytest.mark.asyncio
-    async def test_markitdown_success_mock(
-        self, mock_markitdown_class, mcp_server, sample_text_file
-    ):
+    async def test_markitdown_success_mock(self, mock_markitdown_class, sample_text_file):
         """Test successful conversion with mocked MarkItDown."""
         # Setup mock
         mock_instance = mock_markitdown_class.return_value
@@ -506,7 +537,7 @@ class TestConvertFileWithMocking:
     @pytest.mark.unit
     @patch("markitdown_mcp.server.MarkItDown")
     @pytest.mark.asyncio
-    async def test_markitdown_error_mock(self, mock_markitdown_class, mcp_server, sample_text_file):
+    async def test_markitdown_error_mock(self, mock_markitdown_class, sample_text_file):
         """Test error handling with mocked MarkItDown exception."""
         # Setup mock to raise exception
         mock_instance = mock_markitdown_class.return_value

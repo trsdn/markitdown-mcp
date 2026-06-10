@@ -478,6 +478,14 @@ class TestThroughputPerformance:
             file_path.write_text(content)
             files.append(str(file_path))
 
+        warmup_request = MCPRequest(
+            id="throughput-warmup",
+            method="tools/call",
+            params={"name": "convert_file", "arguments": {"file_path": files[0]}},
+        )
+        warmup_response = await server.handle_request(warmup_request)
+        assert_mcp_success_response(warmup_response, "throughput-warmup")
+
         monitor.start_monitoring()
 
         # Process all files
