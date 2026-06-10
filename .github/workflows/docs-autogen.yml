@@ -11,8 +11,6 @@ on:
           - api
           - all
           - missing
-  schedule:
-    - cron: '0 3 1 * *'  # Monthly on the 1st at 3 AM UTC
 
 permissions:
   contents: write

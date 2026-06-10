@@ -5,9 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-  schedule:
-    # Run tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    paths:
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/test.yml'
   workflow_dispatch:
     inputs:
       test_level:
@@ -529,4 +531,3 @@ jobs:
           name: nightly-${{ matrix.test-category }}-results
           path: |
             pytest-results.xml
-
