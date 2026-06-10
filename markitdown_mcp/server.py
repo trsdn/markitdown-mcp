@@ -29,6 +29,12 @@ from markitdown import MarkItDown
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("markitdown-mcp")
 
+JSONRPCId = str | int | None
+
+XML_MIME_TYPES = {"application/xml", "text/xml"}
+JSON_MIME_TYPES = {"application/json", "text/json"}
+CSV_MIME_TYPES = {"application/csv", "text/csv"}
+
 
 class SecurityError(Exception):
     """Raised when a security violation is detected."""
@@ -188,6 +194,8 @@ def validate_json_security(file_path: str) -> str:
         except json.JSONDecodeError:
             # If it's not valid JSON, let MarkItDown handle it normally
             return file_path
+        except RecursionError as e:
+            raise SecurityError("Security violation: JSON recursion depth limit exceeded") from e
 
         # Check nesting depth
         def check_depth(obj: Any, current_depth: int = 0, max_depth: int = 30) -> None:
@@ -207,6 +215,8 @@ def validate_json_security(file_path: str) -> str:
     except Exception as e:
         if isinstance(e, SecurityError):
             raise
+        if isinstance(e, RecursionError):
+            raise SecurityError("Security violation: JSON recursion depth limit exceeded") from e
         # If validation fails, let MarkItDown handle it
         return file_path
 
@@ -282,11 +292,11 @@ def validate_file_content_security(file_path: str) -> str:
         file_ext = Path(file_path).suffix.lower()
 
         # Apply format-specific validation
-        if (mime_type and "xml" in mime_type) or file_ext in [".xml", ".xhtml"]:
+        if mime_type in XML_MIME_TYPES or file_ext in [".xml", ".xhtml"]:
             return validate_xml_security(file_path)
-        if (mime_type and "json" in mime_type) or file_ext == ".json":
+        if mime_type in JSON_MIME_TYPES or file_ext == ".json":
             return validate_json_security(file_path)
-        if (mime_type and "csv" in mime_type) or file_ext == ".csv":
+        if mime_type in CSV_MIME_TYPES or file_ext == ".csv":
             return validate_csv_security(file_path)
 
         # General file size check
@@ -441,13 +451,9 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
 
     Raises:
         TimeoutError: If conversion times out
-        RecursionError: If recursion limit is exceeded
+        RecursionError: If recursion depth is exceeded
         SecurityError: For security violations
     """
-    # Set recursion limit
-    original_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(100)  # Conservative limit
-
     sanitized_file_path = None
 
     try:
@@ -531,8 +537,6 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
             with contextlib.suppress(OSError, PermissionError):
                 Path(sanitized_file_path).unlink(missing_ok=True)
 
-        # Restore original recursion limit
-        sys.setrecursionlimit(original_limit)
 
 
 @normalize_timing
@@ -589,11 +593,10 @@ def validate_and_sanitize_path(
         if file_path.startswith("/") or (len(file_path) > 2 and file_path[1] == ":"):
             if allowed_dirs:
                 # Resolve allowed directories for proper comparison
-                resolved_allowed_dirs = [
-                    str(Path(allowed_dir).resolve()) for allowed_dir in allowed_dirs
-                ]
+                resolved_allowed_dirs = [Path(allowed_dir).resolve() for allowed_dir in allowed_dirs]
                 is_allowed = any(
-                    str(path).startswith(allowed_dir) for allowed_dir in resolved_allowed_dirs
+                    path == allowed_dir or allowed_dir in path.parents
+                    for allowed_dir in resolved_allowed_dirs
                 )
                 if not is_allowed:
                     raise SecurityError("Security violation: invalid path")
@@ -638,24 +641,45 @@ def get_safe_working_directories() -> list[str]:
     safe_dirs = []
 
     # Add current working directory
-    safe_dirs.append(str(Path.cwd()))
+    safe_dirs.append(str(Path.cwd().resolve()))
 
     # Add home directory subdirectories (but not root directories)
-    home = Path.home()
-    safe_subdirs = ["Documents", "Downloads", "Desktop", "tmp"]
-    for subdir in safe_subdirs:
-        potential_dir = home / subdir
-        if potential_dir.exists():
-            safe_dirs.append(str(potential_dir))
+    try:
+        home = Path.home()
+    except RuntimeError:
+        logger.warning("Could not determine user home; skipping home subdirectories")
+    else:
+        safe_subdirs = ["Documents", "Downloads", "Desktop", "tmp"]
+        for subdir in safe_subdirs:
+            potential_dir = home / subdir
+            if potential_dir.exists():
+                safe_dirs.append(str(potential_dir.resolve()))
 
     # Add temp directories
-    temp_dir = Path(tempfile.gettempdir())
+    temp_dir = Path(tempfile.gettempdir()).resolve()
     safe_dirs.append(str(temp_dir))
 
     # Add test fixtures directory if it exists
     fixtures_dir = Path.cwd() / "tests" / "fixtures"
     if fixtures_dir.exists():
-        safe_dirs.append(str(fixtures_dir))
+        safe_dirs.append(str(fixtures_dir.resolve()))
+
+    for raw_dir in os.environ.get("MARKITDOWN_SAFE_DIRS", "").split(os.pathsep):
+        if not raw_dir:
+            continue
+
+        configured_dir = Path(raw_dir).expanduser()
+        if not configured_dir.is_absolute():
+            logger.warning("Ignoring non-absolute MARKITDOWN_SAFE_DIRS entry: %s", raw_dir)
+            continue
+        if not configured_dir.exists():
+            logger.warning("Ignoring missing MARKITDOWN_SAFE_DIRS entry: %s", raw_dir)
+            continue
+        if not configured_dir.is_dir():
+            logger.warning("Ignoring non-directory MARKITDOWN_SAFE_DIRS entry: %s", raw_dir)
+            continue
+
+        safe_dirs.append(str(configured_dir.resolve()))
 
     return safe_dirs
 
@@ -664,18 +688,39 @@ def get_safe_working_directories() -> list[str]:
 class MCPRequest:
     """Represents an incoming MCP protocol request."""
 
-    id: str
+    id: JSONRPCId
     method: str
-    params: dict[str, Any]
+    params: dict[str, Any] | None
 
 
 @dataclass
 class MCPResponse:
     """Represents an MCP protocol response."""
 
-    id: str
+    id: JSONRPCId
     result: dict[str, Any] | None = None
     error: dict[str, Any] | None = None
+
+
+def get_convert_file_tool_schema() -> dict[str, Any]:
+    """Return the convert_file tool schema without top-level composition keywords."""
+    return {
+        "type": "object",
+        "properties": {
+            "file_path": {
+                "type": "string",
+                "description": "Path to the file to convert",
+            },
+            "file_content": {
+                "type": "string",
+                "description": "Base64 encoded file content (alternative to file_path)",
+            },
+            "filename": {
+                "type": "string",
+                "description": "Original filename when using file_content",
+            },
+        },
+    }
 
 
 class MarkItDownMCPServer:
@@ -758,30 +803,11 @@ class MarkItDownMCPServer:
         return [
             {
                 "name": "convert_file",
-                "description": "Convert a file to Markdown using MarkItDown",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "Path to the file to convert",
-                        },
-                        "file_content": {
-                            "type": "string",
-                            "description": (
-                                "Base64 encoded file content (alternative to file_path)"
-                            ),
-                        },
-                        "filename": {
-                            "type": "string",
-                            "description": "Original filename when using file_content",
-                        },
-                    },
-                    "anyOf": [
-                        {"required": ["file_path"]},
-                        {"required": ["file_content", "filename"]},
-                    ],
-                },
+                "description": (
+                    "Convert a file to Markdown using MarkItDown. Provide either "
+                    "'file_path' OR both 'file_content' (base64) and 'filename'."
+                ),
+                "inputSchema": get_convert_file_tool_schema(),
             },
             {
                 "name": "list_supported_formats",
@@ -811,6 +837,8 @@ class MarkItDownMCPServer:
     async def handle_request(self, request: MCPRequest) -> MCPResponse:
         """Handle incoming MCP requests."""
         try:
+            params = request.params or {}
+
             if request.method == "initialize":
                 return MCPResponse(
                     id=request.id,
@@ -822,71 +850,11 @@ class MarkItDownMCPServer:
                 )
 
             if request.method == "tools/list":
-                return MCPResponse(
-                    id=request.id,
-                    result={
-                        "tools": [
-                            {
-                                "name": "convert_file",
-                                "description": "Convert a file to Markdown using MarkItDown",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "file_path": {
-                                            "type": "string",
-                                            "description": "Path to the file to convert",
-                                        },
-                                        "file_content": {
-                                            "type": "string",
-                                            "description": (
-                                                "Base64 encoded file content "
-                                                "(alternative to file_path)"
-                                            ),
-                                        },
-                                        "filename": {
-                                            "type": "string",
-                                            "description": "Original filename when using "
-                                            "file_content",
-                                        },
-                                    },
-                                    "anyOf": [
-                                        {"required": ["file_path"]},
-                                        {"required": ["file_content", "filename"]},
-                                    ],
-                                },
-                            },
-                            {
-                                "name": "list_supported_formats",
-                                "description": "List all supported file formats for conversion",
-                                "inputSchema": {"type": "object", "properties": {}},
-                            },
-                            {
-                                "name": "convert_directory",
-                                "description": "Convert all supported files in a "
-                                "directory to Markdown",
-                                "inputSchema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "input_directory": {
-                                            "type": "string",
-                                            "description": "Path to the input directory",
-                                        },
-                                        "output_directory": {
-                                            "type": "string",
-                                            "description": "Path to the output directory "
-                                            "(optional)",
-                                        },
-                                    },
-                                    "required": ["input_directory"],
-                                },
-                            },
-                        ]
-                    },
-                )
+                return MCPResponse(id=request.id, result={"tools": self.get_tools()})
 
             if request.method == "tools/call":
-                tool_name = request.params.get("name")
-                arguments = request.params.get("arguments", {})
+                tool_name = params.get("name")
+                arguments = params.get("arguments", {})
 
                 # Validate required parameters
                 if not tool_name:
@@ -917,7 +885,9 @@ class MarkItDownMCPServer:
                 id=request.id, error={"code": -32603, "message": f"Internal error: {e!s}"}
             )
 
-    async def convert_file_tool(self, request_id: str, arguments: dict[str, Any]) -> MCPResponse:
+    async def convert_file_tool(
+        self, request_id: JSONRPCId, arguments: dict[str, Any]
+    ) -> MCPResponse:
         """Convert a single file to Markdown."""
         try:
             file_path = arguments.get("file_path")
@@ -989,6 +959,7 @@ class MarkItDownMCPServer:
                     ) as temp_file:
                         temp_file.write(decoded_content)
                         temp_path = temp_file.name
+                    del decoded_content
 
                     try:
                         result = safe_convert_with_limits(self.markitdown, temp_path)
@@ -1028,7 +999,7 @@ class MarkItDownMCPServer:
                 )
 
         except Exception as e:
-            logger.error(f"Error in convert_file_tool: {e}")
+            logger.exception("Error in convert_file_tool")
             # Sanitize error message to prevent information disclosure
             error_str = str(e).lower()
             if (
@@ -1052,7 +1023,7 @@ class MarkItDownMCPServer:
 
             return MCPResponse(id=request_id, error={"code": -32603, "message": safe_message})
 
-    async def list_supported_formats_tool(self, request_id: str) -> MCPResponse:
+    async def list_supported_formats_tool(self, request_id: JSONRPCId) -> MCPResponse:
         """List all supported file formats."""
         format_categories = {
             "Office Documents": [".pdf", ".docx", ".pptx", ".xlsx", ".xls"],
@@ -1086,7 +1057,7 @@ class MarkItDownMCPServer:
         )
 
     async def convert_directory_tool(
-        self, request_id: str, arguments: dict[str, Any]
+        self, request_id: JSONRPCId, arguments: dict[str, Any]
     ) -> MCPResponse:
         """Convert all supported files in a directory."""
         try:
@@ -1259,13 +1230,17 @@ class MarkItDownMCPServer:
 
                 try:
                     message = json.loads(line.strip())
+                    is_notification = "id" not in message
                     request = MCPRequest(
-                        id=message.get("id", "unknown"),
+                        id=message.get("id"),
                         method=message["method"],
                         params=message.get("params", {}),
                     )
 
                     response = await self.handle_request(request)
+
+                    if is_notification:
+                        continue
 
                     # Send response
                     response_dict: dict[str, Any] = {"jsonrpc": "2.0", "id": response.id}
@@ -1289,6 +1264,7 @@ class MarkItDownMCPServer:
 
 def main() -> None:
     """Main entry point for console script."""
+    configure_stdio()
 
     async def run_server() -> None:
         """Run the MCP server asynchronously."""
@@ -1296,6 +1272,17 @@ def main() -> None:
         await server.run()
 
     asyncio.run(run_server())
+
+
+def configure_stdio() -> None:
+    """Use UTF-8 text I/O and LF-delimited JSON-RPC messages when supported."""
+    stdin_reconfigure = getattr(sys.stdin, "reconfigure", None)
+    if stdin_reconfigure is not None:
+        stdin_reconfigure(encoding="utf-8")
+
+    stdout_reconfigure = getattr(sys.stdout, "reconfigure", None)
+    if stdout_reconfigure is not None:
+        stdout_reconfigure(encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

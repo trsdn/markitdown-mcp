@@ -389,8 +389,9 @@ class TestMemoryScaling:
             summary["peak_delta_mb"] < 200
         ), f"Directory processing used excessive memory: {summary['peak_delta_mb']:.2f}MB"
 
-        # Memory efficiency should be reasonable compared to total content
-        if total_content_size > 0:
+        # Memory efficiency ratios are only meaningful once input size is large enough
+        # to dominate fixed interpreter/library overhead.
+        if total_content_size >= 1.0:
             efficiency_ratio = summary["peak_delta_mb"] / total_content_size
             assert (
                 efficiency_ratio < 100.0

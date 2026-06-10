@@ -358,8 +358,10 @@ class TestClaudeDesktopCompatibility:
                 assert "file_content" in properties
                 assert "filename" in properties
 
-                # Should have anyOf for alternative argument sets
-                assert "anyOf" in schema
+                # Claude/Anthropic clients reject top-level anyOf/oneOf/allOf.
+                assert "anyOf" not in schema
+                assert "oneOf" not in schema
+                assert "allOf" not in schema
 
             elif tool["name"] == "list_supported_formats":
                 # Should accept empty arguments
