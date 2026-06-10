@@ -3,6 +3,12 @@ name: Code Annotations & Inline Comments
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    branches-ignore: [ci-cd-maintenance]
+    paths:
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/code-annotations.yml'
 
 permissions:
   contents: read
