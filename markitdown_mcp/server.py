@@ -538,7 +538,6 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
                 Path(sanitized_file_path).unlink(missing_ok=True)
 
 
-
 @normalize_timing
 def validate_and_sanitize_path(
     file_path: str, allowed_dirs: list[str] | None = None
@@ -593,7 +592,9 @@ def validate_and_sanitize_path(
         if file_path.startswith("/") or (len(file_path) > 2 and file_path[1] == ":"):
             if allowed_dirs:
                 # Resolve allowed directories for proper comparison
-                resolved_allowed_dirs = [Path(allowed_dir).resolve() for allowed_dir in allowed_dirs]
+                resolved_allowed_dirs = [
+                    Path(allowed_dir).resolve() for allowed_dir in allowed_dirs
+                ]
                 is_allowed = any(
                     path == allowed_dir or allowed_dir in path.parents
                     for allowed_dir in resolved_allowed_dirs
