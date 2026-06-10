@@ -535,7 +535,6 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
         sys.setrecursionlimit(original_limit)
 
 
-@normalize_timing
 def validate_and_sanitize_path(
     file_path: str, allowed_dirs: list[str] | None = None
 ) -> tuple[Path, bool]:
