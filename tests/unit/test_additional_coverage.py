@@ -12,16 +12,17 @@ import pytest
 
 from markitdown_mcp.server import (
     MarkItDownMCPServer,
-    MCPRequest,
     SecurityError,
-    validate_xml_security,
-    validate_json_security,
     extract_text_from_binary,
-    sanitize_unicode_text,
-    with_timeout,
-    validate_base64,
+    normalize_timing,
     safe_convert_with_limits,
+    sanitize_unicode_text,
+    secure_compare,
+    validate_base64,
     validate_file_content_security,
+    validate_json_security,
+    validate_xml_security,
+    with_timeout,
 )
 
 
@@ -200,6 +201,35 @@ class TestAdditionalCoverage:
 
         result = operation()
         assert result == "no timeout"
+
+    def test_secure_compare(self):
+        """Test constant-time comparison helper."""
+        assert secure_compare("same", "same") is True
+        assert secure_compare("same", "different") is False
+
+    def test_normalize_timing_success(self):
+        """Test timing normalization decorator returns successful results."""
+        @normalize_timing
+        def operation():
+            return "normalized"
+
+        start_time = time.time()
+        result = operation()
+
+        assert result == "normalized"
+        assert time.time() - start_time >= 0.05
+
+    def test_normalize_timing_exception(self):
+        """Test timing normalization decorator re-raises exceptions."""
+        @normalize_timing
+        def operation():
+            raise ValueError("normalized error")
+
+        start_time = time.time()
+        with pytest.raises(ValueError, match="normalized error"):
+            operation()
+
+        assert time.time() - start_time >= 0.05
 
     def test_validate_base64_valid(self):
         """Test base64 validation with valid data."""

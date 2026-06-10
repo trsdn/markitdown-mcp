@@ -538,7 +538,6 @@ def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) ->
                 Path(sanitized_file_path).unlink(missing_ok=True)
 
 
-@normalize_timing
 def validate_and_sanitize_path(
     file_path: str, allowed_dirs: list[str] | None = None
 ) -> tuple[Path, bool]:
