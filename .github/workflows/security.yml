@@ -5,10 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-  schedule:
-    # Run security scans daily at 3 AM UTC
-    - cron: '0 3 * * *'
-
+    paths:
+      - '**/*.py'
+      - 'pyproject.toml'
+      - 'requirements*.txt'
+      - '.github/workflows/security.yml'
 # Cancel duplicate runs
 concurrency:
   group: security-${{ github.ref }}

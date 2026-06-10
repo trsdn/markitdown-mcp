@@ -2,6 +2,7 @@
 Unit tests for MCP protocol handling in MarkItDown MCP Server
 """
 
+import io
 import json
 from unittest.mock import patch
 
@@ -106,6 +107,20 @@ class TestToolsListMethod:
             assert isinstance(tool["inputSchema"], dict)
             assert "type" in tool["inputSchema"]
             assert tool["inputSchema"]["type"] == "object"
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_convert_file_schema_avoids_top_level_composition(self, mcp_server):
+        """Anthropic MCP clients reject anyOf/oneOf/allOf at the inputSchema top level."""
+        response = await mcp_server.handle_request(MCPRequest(id="tools-test", method="tools/list", params={}))
+
+        convert_file_tool = next(
+            tool for tool in response.result["tools"] if tool["name"] == "convert_file"
+        )
+
+        assert "anyOf" not in convert_file_tool["inputSchema"]
+        assert "oneOf" not in convert_file_tool["inputSchema"]
+        assert "allOf" not in convert_file_tool["inputSchema"]
 
 
 class TestUnknownMethods:
@@ -231,6 +246,33 @@ class TestJSONRPCCompliance:
 
         assert parsed["id"] == "compliance-test"
         assert "result" in parsed
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_server_does_not_reply_to_notifications(self, monkeypatch):
+        """JSON-RPC notifications do not have an id and must not receive responses."""
+        server = MarkItDownMCPServer()
+        stdin = io.StringIO(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "notifications/initialized",
+                    "params": {},
+                }
+            )
+            + "\n"
+            + json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
+            + "\n"
+        )
+        stdout = io.StringIO()
+        monkeypatch.setattr("sys.stdin", stdin)
+        monkeypatch.setattr("sys.stdout", stdout)
+
+        await server.run()
+
+        responses = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        assert len(responses) == 1
+        assert responses[0]["id"] == 1
 
     @pytest.mark.unit
     @pytest.mark.asyncio

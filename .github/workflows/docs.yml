@@ -2,10 +2,15 @@ name: Documentation CI
 on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
+    paths:
+      - '**/*.py'
+      - 'docs/**'
+      - '**/*.md'
+      - '**/*.rst'
+      - 'pyproject.toml'
+      - '.github/workflows/docs.yml'
   push:
     branches: [main]
-  schedule:
-    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM UTC for link rot detection
 
 permissions:
   contents: read
@@ -189,10 +194,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install pdoc
+      - name: Install documentation dependencies
         run: |
           pip install --upgrade pip
-          pip install pdoc
+          pip install -e ".[docs]"
 
       - name: Generate API documentation preview
         run: |

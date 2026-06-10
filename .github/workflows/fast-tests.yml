@@ -4,7 +4,7 @@ on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
     paths:
-      - '**.py'
+      - '**/*.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
       - '.github/workflows/fast-tests.yml'
