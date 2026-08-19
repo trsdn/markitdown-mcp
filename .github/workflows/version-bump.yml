@@ -150,17 +150,11 @@ jobs:
           "
 
       - name: Update CHANGELOG.md
+        env:
+          NEW_VERSION: ${{ needs.analyze-changes.outputs.new-version }}
+          CHANGELOG: ${{ needs.analyze-changes.outputs.changelog }}
         run: |
-          NEW_VERSION="${{ needs.analyze-changes.outputs.new-version }}"
-          CHANGELOG="${{ needs.analyze-changes.outputs.changelog }}"
-
-          # Create new changelog entry
-          cat > new_entry.md << 'EOF'
-          ## [$NEW_VERSION] - $(date +%Y-%m-%d)
-
-          $CHANGELOG
-
-          EOF
+          RELEASE_DATE="$(date -u +%Y-%m-%d)"
 
           # Backup current changelog
           cp CHANGELOG.md CHANGELOG.md.bak
@@ -174,15 +168,17 @@ jobs:
             echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),"
             echo "and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
             echo ""
-            # Add new entry
-            envsubst < new_entry.md
+            # Step-level env bindings keep commit-derived changelog text out of shell source.
+            printf '## [%s] - %s\n' "$NEW_VERSION" "$RELEASE_DATE"
+            echo ""
+            printf '%s\n' "$CHANGELOG"
             echo ""
             # Add existing content (skip header)
             tail -n +9 CHANGELOG.md.bak
           } > CHANGELOG.md
 
           # Clean up
-          rm new_entry.md CHANGELOG.md.bak
+          rm CHANGELOG.md.bak
 
       - name: Commit changes
         run: |
@@ -202,44 +198,50 @@ jobs:
           Release will be triggered automatically when this PR is merged."
 
       - name: Push branch and create PR
+        env:
+          NEW_VERSION: ${{ needs.analyze-changes.outputs.new-version }}
+          BUMP_TYPE: ${{ needs.analyze-changes.outputs.bump-type }}
+          COMMITS_COUNT: ${{ needs.analyze-changes.outputs.commits-count }}
+          CHANGELOG: ${{ needs.analyze-changes.outputs.changelog }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NEW_VERSION="${{ needs.analyze-changes.outputs.new-version }}"
-          BUMP_TYPE="${{ needs.analyze-changes.outputs.bump-type }}"
           BRANCH_NAME="${{ env.branch-name }}"
 
           # Force push branch (overwrite any existing branch)
           git push --force origin "$BRANCH_NAME"
 
-          # Create PR description
-          cat > pr_body.md << EOF
-          ## 🚀 Automated Version Bump: v$NEW_VERSION
+          GENERATED_AT="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
-          This PR automatically bumps the version based on conventional commits since the last release.
-
-          ### 📊 Release Summary
-          - **Version Type**: $BUMP_TYPE
-          - **New Version**: v$NEW_VERSION
-          - **Commits Included**: ${{ needs.analyze-changes.outputs.commits-count }}
-          - **Generated**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-
-          ### 📝 Changelog Preview
-          ${{ needs.analyze-changes.outputs.changelog }}
-
-          ### 🎯 What Happens Next
-          1. **Review**: Maintainers review this automated version bump
-          2. **Merge**: When merged, a git tag \`v$NEW_VERSION\` will be created
-          3. **Release**: The tag will trigger the automated release workflow
-          4. **Publish**: Package will be published to PyPI automatically
-
-          ### ✅ Pre-Release Checklist
-          - [ ] Version number looks correct
-          - [ ] Changelog entries are accurate
-          - [ ] No breaking changes in patch/minor releases
-          - [ ] All CI checks pass
-
-          ---
-          *This PR was created automatically by the version bump workflow. The release will be fully automated upon merge.*
-          EOF
+          # Emit dynamic values as data rather than interpolating them into shell source.
+          {
+            printf '## 🚀 Automated Version Bump: v%s\n' "$NEW_VERSION"
+            echo ""
+            echo "This PR automatically bumps the version based on conventional commits since the last release."
+            echo ""
+            echo "### 📊 Release Summary"
+            printf -- '- **Version Type**: %s\n' "$BUMP_TYPE"
+            printf -- '- **New Version**: v%s\n' "$NEW_VERSION"
+            printf -- '- **Commits Included**: %s\n' "$COMMITS_COUNT"
+            printf -- '- **Generated**: %s\n' "$GENERATED_AT"
+            echo ""
+            echo "### 📝 Changelog Preview"
+            printf '%s\n' "$CHANGELOG"
+            echo ""
+            echo "### 🎯 What Happens Next"
+            echo "1. **Review**: Maintainers review this automated version bump"
+            printf '2. **Merge**: When merged, a git tag `v%s` will be created\n' "$NEW_VERSION"
+            echo "3. **Release**: The tag will trigger the automated release workflow"
+            echo "4. **Publish**: Package will be published to PyPI automatically"
+            echo ""
+            echo "### ✅ Pre-Release Checklist"
+            echo "- [ ] Version number looks correct"
+            echo "- [ ] Changelog entries are accurate"
+            echo "- [ ] No breaking changes in patch/minor releases"
+            echo "- [ ] All CI checks pass"
+            echo ""
+            echo "---"
+            echo "*This PR was created automatically by the version bump workflow. The release will be fully automated upon merge.*"
+          } > pr_body.md
 
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head "$BRANCH_NAME" --json number --jq '.[0].number' || echo "")
@@ -279,8 +281,6 @@ jobs:
               echo "Settings → Actions → General → Workflow permissions"
             fi
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   auto-tag-on-merge:
     name: Auto-tag on Merge
@@ -294,8 +294,10 @@ jobs:
 
       - name: Extract version from commit message
         id: version
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          # Keep the commit message out of shell source before extracting the version.
           VERSION=$(echo "$COMMIT_MESSAGE" | grep -oP 'chore: bump version to v\K[0-9]+\.[0-9]+\.[0-9]+' || echo "")
 
           if [ -z "$VERSION" ]; then
