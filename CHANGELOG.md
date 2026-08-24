@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Release workflow: `post-release-validation` now passes `-R <repo>` to `gh release view`,
+  so the check no longer fails with "GitHub release missing" in a job without a checkout.
+- Release workflow: the PyPI verification uses the PyPI JSON API with retries instead of
+  the experimental `pip index versions` plus a substring `grep`.
+- Release workflow: `update-docs` opens a pull request with the changelog update instead of
+  pushing directly to the protected `main` branch (GH006).
+
 ### Changed
 - **Renamed the PyPI distribution to `trsdn-markitdown-mcp`** (the name `markitdown-mcp`
   is taken by Microsoft's official project). The import package (`markitdown_mcp`) and the
