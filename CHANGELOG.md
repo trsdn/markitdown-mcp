@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Release workflow: `publish`, `create-github-release` and `post-release-validation` no
+  longer require `github.ref` to be a tag. `workflow_dispatch` takes a required `tag`
+  input and every job checks that tag out, so a dispatch is a re-run of the pipeline for
+  an existing tag; on a dispatch `github.ref` is `refs/heads/main`, so the guard was
+  always false and silently skipped the upload while the run still reported success.
+  Duplicate uploads remain prevented by the existing "Check if tag already exists in
+  releases" step in `validate-release`.
 - CI: removed the `paths:` filter from the `pull_request` trigger of `ci-gates.yml` and
   `fast-tests.yml`. These workflows provide the required status checks `Unit Tests &
   Coverage`, `Integration Smoke Tests` and `Quick Security Scan`; with a path filter they
