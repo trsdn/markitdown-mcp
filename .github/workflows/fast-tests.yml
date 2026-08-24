@@ -1,13 +1,14 @@
 name: Fast Tests
 
 on:
+  # NOTE: Deliberately no `paths:` filter here. This workflow provides the
+  # required status checks "Integration Smoke Tests" and "Quick Security Scan"
+  # on `main`. A path filter would prevent the workflow from running on PRs that
+  # touch no matching files (e.g. docs-only or YAML-only PRs), so those required
+  # checks would never report and the PR would stay blocked forever waiting on
+  # statuses that never arrive.
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-    paths:
-      - '**/*.py'
-      - 'pyproject.toml'
-      - 'requirements*.txt'
-      - '.github/workflows/fast-tests.yml'
   push:
     branches: [main]
   workflow_dispatch:
