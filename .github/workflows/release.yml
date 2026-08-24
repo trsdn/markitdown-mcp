@@ -561,8 +561,10 @@ jobs:
           git add CHANGELOG.md
           git commit -m "docs: update changelog for v${VERSION}"
 
-          # Re-runs of the same tag reuse the branch; overwrite it instead of failing.
-          git push --force origin "$BRANCH"
+          # Re-runs of the same tag reuse the branch; overwrite it instead of
+          # failing, but keep --force-with-lease so a foreign commit that landed
+          # on the branch is not silently discarded.
+          git push --force-with-lease origin "$BRANCH"
 
           if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
             echo "✅ Pull request for $BRANCH already open, updated with latest changelog"
@@ -597,8 +599,7 @@ jobs:
           echo "🔍 Validating release completion for $TAG"
 
           # Check GitHub release
-          # -R is required: this job has no checkout, so gh cannot infer the repo.
-          if gh release view "$TAG" -R "${{ github.repository }}" >/dev/null 2>&1; then
+          if gh release view "$TAG" >/dev/null 2>&1; then
             echo "✅ GitHub release exists"
           else
             echo "❌ GitHub release missing"
@@ -629,6 +630,10 @@ jobs:
           echo "🎉 Release validation completed successfully!"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This job has no checkout, so `gh` cannot infer the repository from a
+          # git remote and reported "GitHub release missing" for a release that
+          # actually existed.
+          GH_REPO: ${{ github.repository }}
 
       - name: Notify on failure
         if: failure()

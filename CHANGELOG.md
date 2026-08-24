@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Release workflow: `post-release-validation` now passes `-R <repo>` to `gh release view`,
-  so the check no longer fails with "GitHub release missing" in a job without a checkout.
+- Release workflow: `post-release-validation` now sets `GH_REPO` for the step, so `gh`
+  resolves the repository in a job without a checkout instead of failing the check with
+  "GitHub release missing".
 - Release workflow: the PyPI verification uses the PyPI JSON API with retries instead of
   the experimental `pip index versions` plus a substring `grep`.
 - Release workflow: `update-docs` opens a pull request with the changelog update instead of
