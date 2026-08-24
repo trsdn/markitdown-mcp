@@ -19,15 +19,19 @@ import sys
 import tempfile
 import time
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ParamSpec, TypeVar, cast
 
 from markitdown import MarkItDown
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("markitdown-mcp")
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 JSONRPCId = str | int | None
 
@@ -44,12 +48,12 @@ class TimeoutError(Exception):
     """Raised when an operation times out."""
 
 
-def with_timeout(timeout_seconds: int = 30) -> Any:
+def with_timeout(timeout_seconds: int = 30) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator to add timeout protection to functions using threading."""
 
-    def decorator(func: Any) -> Any:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             import threading
 
             result: list[Any] = [None]
@@ -73,7 +77,7 @@ def with_timeout(timeout_seconds: int = 30) -> Any:
             if exception[0]:
                 raise exception[0]
 
-            return result[0]
+            return cast("R", result[0])
 
         return wrapper
 
@@ -438,7 +442,7 @@ def extract_text_from_binary(data: bytes, filename: str = "") -> str | None:  # 
         return None
 
 
-@with_timeout(30)  # type: ignore[misc]
+@with_timeout(30)
 def safe_convert_with_limits(markitdown_instance: MarkItDown, file_path: str) -> Any:
     """Safely convert a file with timeout and recursion protection.
 
@@ -1159,7 +1163,7 @@ class MarkItDownMCPServer:
 
                         # Write file asynchronously
                         def write_file(
-                            path: str = output_path, content: str = markdown_content
+                            path: Path = output_path, content: str = markdown_content
                         ) -> None:
                             with Path(path).open("w", encoding="utf-8") as f:
                                 f.write(content)
