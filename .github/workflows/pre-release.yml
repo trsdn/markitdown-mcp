@@ -22,10 +22,10 @@ on:
         default: false
         type: boolean
 
+# Least privilege by default; jobs opt into what they need.
+# `id-token: write` is granted ONLY to the TestPyPI upload job.
 permissions:
-  contents: write
-  id-token: write
-  packages: write
+  contents: read
 
 # Ensure only one pre-release runs at a time
 concurrency:
@@ -323,6 +323,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [prepare-prerelease, build-prerelease]
     environment: test-pypi
+    # No API tokens: authentication happens via short-lived OIDC credentials.
+    permissions:
+      id-token: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -362,6 +365,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [prepare-prerelease, build-prerelease, test-pypi-upload]
     if: always() && needs.prepare-prerelease.result == 'success' && needs.build-prerelease.result == 'success'
+    # Pushes the pre-release tag and creates the GitHub pre-release.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 

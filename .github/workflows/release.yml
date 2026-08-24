@@ -426,7 +426,12 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: [validate-release, quality-gates, security-scan, build-package, generate-changelog]
-    if: needs.validate-release.outputs.is-prerelease == 'false'
+    # Only ever upload from a tag push. A manual `workflow_dispatch` run is a
+    # dry run of build + quality gates: PyPI rejects re-uploading an existing
+    # version, so a dispatch that reached this job would always fail.
+    if: |
+      startsWith(github.ref, 'refs/tags/')
+      && needs.validate-release.outputs.is-prerelease == 'false'
     environment: pypi
     # No API tokens: authentication happens via short-lived OIDC credentials.
     permissions:
@@ -466,8 +471,11 @@ jobs:
     needs: [validate-release, build-package, generate-changelog, publish]
     # `always()` so prereleases (where `publish` is skipped) still get a GitHub
     # release, but never when a required upstream job actually failed.
+    # Tag-only for the same reason as `publish`: a manual dispatch must not try
+    # to create a release for a ref that is not a tag.
     if: |
       always()
+      && startsWith(github.ref, 'refs/tags/')
       && needs.validate-release.result == 'success'
       && needs.build-package.result == 'success'
       && needs.generate-changelog.result == 'success'
@@ -587,7 +595,9 @@ jobs:
     name: Post-Release Validation
     runs-on: ubuntu-latest
     needs: [validate-release, create-github-release, publish, update-docs]
-    if: always()
+    # Tag-only: on a manual dispatch there is no release to validate, so this
+    # would always fail with "GitHub release missing".
+    if: always() && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Validate release completion
         run: |
