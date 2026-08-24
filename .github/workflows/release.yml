@@ -4,11 +4,17 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to (re-)run the pipeline for, e.g. v1.2.3'
+        required: true
+        type: string
 
+# Least privilege by default; jobs opt into what they need.
+# `id-token: write` is granted ONLY to the publish job (PyPI Trusted Publishing).
 permissions:
-  contents: write
-  id-token: write
-  packages: write
+  contents: read
 
 # Ensure only one release runs at a time
 concurrency:
@@ -30,11 +36,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Extract version from tag
         id: version
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
+          TAG="${{ inputs.tag || github.ref_name }}"
           VERSION=${TAG#v}
 
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -80,6 +87,8 @@ jobs:
         python-version: ['3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -135,6 +144,8 @@ jobs:
     needs: validate-release
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -176,6 +187,8 @@ jobs:
       package-version: ${{ steps.build.outputs.package-version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -188,9 +201,26 @@ jobs:
       - name: Build package
         id: build
         run: |
-          # Update version in pyproject.toml to match tag
+          # Update version in pyproject.toml to match tag.
+          # NOTE: a plain `sed s/version = ".*"/.../` also rewrites `python_version`
+          # and `target-version` in the [tool.*] sections, so anchor on the line start
+          # and replace exactly one occurrence.
           VERSION="${{ needs.validate-release.outputs.version }}"
-          sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+          python - "$VERSION" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          version = sys.argv[1]
+          path = pathlib.Path("pyproject.toml")
+          text = path.read_text(encoding="utf-8")
+          text, count = re.subn(
+              r'^version = ".*"$', f'version = "{version}"', text, count=1, flags=re.M
+          )
+          if count != 1:
+              raise SystemExit("Could not update [project] version in pyproject.toml")
+          path.write_text(text, encoding="utf-8")
+          PY
 
           # Build package
           python -m build
@@ -212,18 +242,35 @@ jobs:
 
           # Test basic functionality
           python -c "
+          from importlib.metadata import version
+
           import markitdown_mcp
-          print(f'✅ Package installed successfully: {markitdown_mcp.__version__}')
+
+          print(f'✅ Package installed successfully: {version(\"trsdn-markitdown-mcp\")}')
+          print(f'   import package: {markitdown_mcp.__name__}')
           "
 
-          # Test MCP server
-          echo '{}' | markitdown-mcp || echo "⚠️ MCP server test skipped"
+          # Test every documented entrypoint against a real MCP request
+          REQUEST='{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+          echo "$REQUEST" | timeout 60 markitdown-mcp | tee /tmp/tools-list.json
+          echo "$REQUEST" | timeout 60 trsdn-markitdown-mcp > /dev/null
+          echo "$REQUEST" | timeout 60 python -m markitdown_mcp > /dev/null
+
+          python -c "
+          import json
+          import pathlib
+
+          tools = json.loads(pathlib.Path('/tmp/tools-list.json').read_text())['result']['tools']
+          assert len(tools) >= 3, f'expected 3+ tools, got {len(tools)}'
+          print(f'✅ MCP entrypoints OK: {len(tools)} tools')
+          "
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ needs.validate-release.outputs.version }}
           path: dist/
+          if-no-files-found: error
           retention-days: 30
 
   # ==========================================
@@ -240,6 +287,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Generate changelog from commits
         id: changelog
@@ -370,14 +418,19 @@ jobs:
           "
 
   # ==========================================
-  # Publish to PyPI
+  # Publish to PyPI (Trusted Publishing / OIDC)
   # ==========================================
-  publish-pypi:
+  # Publisher configuration on PyPI must match EXACTLY:
+  #   repository: trsdn/markitdown-mcp | workflow: release.yml | environment: pypi
+  publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [validate-release, build-package, generate-changelog]
+    needs: [validate-release, quality-gates, security-scan, build-package, generate-changelog]
     if: needs.validate-release.outputs.is-prerelease == 'false'
-    environment: release
+    environment: pypi
+    # No API tokens: authentication happens via short-lived OIDC credentials.
+    permissions:
+      id-token: write
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -394,23 +447,37 @@ jobs:
         run: |
           sleep 30  # Wait for PyPI to update
 
-          pip install markitdown-mcp==${{ needs.validate-release.outputs.version }}
+          pip install trsdn-markitdown-mcp==${{ needs.validate-release.outputs.version }}
 
           python -c "
-          import markitdown_mcp
-          print(f'✅ Successfully published to PyPI: v{markitdown_mcp.__version__}')
+          from importlib.metadata import version
+
+          import markitdown_mcp  # noqa: F401
+
+          print(f'✅ Successfully published to PyPI: v{version(\"trsdn-markitdown-mcp\")}')
           "
 
   # ==========================================
-  # Create GitHub Release
+  # Create GitHub Release (after the PyPI publish)
   # ==========================================
   create-github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [validate-release, build-package, generate-changelog, publish-pypi]
-    if: always() && needs.validate-release.result == 'success'
+    needs: [validate-release, build-package, generate-changelog, publish]
+    # `always()` so prereleases (where `publish` is skipped) still get a GitHub
+    # release, but never when a required upstream job actually failed.
+    if: |
+      always()
+      && needs.validate-release.result == 'success'
+      && needs.build-package.result == 'success'
+      && needs.generate-changelog.result == 'success'
+      && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -443,11 +510,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [validate-release, generate-changelog, create-github-release]
     if: needs.validate-release.outputs.is-prerelease == 'false'
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: main
 
       - name: Update CHANGELOG.md
         run: |
@@ -492,7 +562,7 @@ jobs:
   post-release-validation:
     name: Post-Release Validation
     runs-on: ubuntu-latest
-    needs: [validate-release, create-github-release, publish-pypi, update-docs]
+    needs: [validate-release, create-github-release, publish, update-docs]
     if: always()
     steps:
       - name: Validate release completion
@@ -512,7 +582,7 @@ jobs:
 
           # Check PyPI (skip for prereleases)
           if [[ "${{ needs.validate-release.outputs.is-prerelease }}" == "false" ]]; then
-            if pip index versions markitdown-mcp | grep -q "$VERSION"; then
+            if pip index versions trsdn-markitdown-mcp | grep -q "$VERSION"; then
               echo "✅ PyPI package published"
             else
               echo "❌ PyPI package missing"

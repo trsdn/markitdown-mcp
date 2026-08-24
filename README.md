@@ -1,12 +1,26 @@
 # 📄 MarkItDown MCP Server
 
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-MCP-blue)](https://modelcontextprotocol.io)
+[![PyPI](https://img.shields.io/pypi/v/trsdn-markitdown-mcp.svg)](https://pypi.org/project/trsdn-markitdown-mcp/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/trsdn/markitdown-mcp/workflows/CI/badge.svg)](https://github.com/trsdn/markitdown-mcp/actions)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
 
 A powerful **Model Context Protocol (MCP) server** that converts 29+ file formats to clean, structured Markdown using Microsoft's MarkItDown library.
+
+> [!IMPORTANT]
+> **This is not Microsoft's official `markitdown-mcp` package.**
+> This is an independent community project published on PyPI as
+> **[`trsdn-markitdown-mcp`](https://pypi.org/project/trsdn-markitdown-mcp/)**.
+> It *uses* Microsoft's [`markitdown`](https://pypi.org/project/markitdown/) library as a
+> dependency, but it is developed and maintained separately from
+> [`markitdown-mcp`](https://pypi.org/project/markitdown-mcp/) by Microsoft.
+>
+> - **PyPI distribution name**: `trsdn-markitdown-mcp`
+> - **Python import name**: `markitdown_mcp`
+> - **CLI command**: `markitdown-mcp` (alias: `trsdn-markitdown-mcp`)
+
 
 🔥 **Perfect for Claude Desktop, MCP clients, and AI workflows!** 
 
@@ -23,11 +37,11 @@ A powerful **Model Context Protocol (MCP) server** that converts 29+ file format
 
 | File Type | Required Dependencies | Install Command |
 |-----------|----------------------|-----------------|
-| **PDF** | `pypdf`, `pymupdf`, `pdfplumber` | `pipx inject markitdown-mcp 'markitdown[all]'` |
-| **Excel (.xlsx, .xls)** | `openpyxl`, `xlrd`, `pandas` | `pipx inject markitdown-mcp openpyxl xlrd pandas` |
+| **PDF** | `pypdf`, `pymupdf`, `pdfplumber` | `pipx inject trsdn-markitdown-mcp 'markitdown[all]'` |
+| **Excel (.xlsx, .xls)** | `openpyxl`, `xlrd`, `pandas` | `pipx inject trsdn-markitdown-mcp openpyxl xlrd pandas` |
 | **PowerPoint (.pptx)** | `python-pptx` | Included in base install |
 | **Images** | `PIL`, `exiftool` (optional) | Included in base install |
-| **Audio** | `pydub`, `speech_recognition` | `pipx inject markitdown-mcp 'markitdown[all]'` |
+| **Audio** | `pydub`, `speech_recognition` | `pipx inject trsdn-markitdown-mcp 'markitdown[all]'` |
 | **Basic formats** | None | Base install only |
 
 **Note**: For the best experience, we recommend installing all dependencies using the **Complete Install** method below.
@@ -41,8 +55,8 @@ A powerful **Model Context Protocol (MCP) server** that converts 29+ file format
 1. **Install the server with ALL features:**
    ```bash
    # One command to install everything
-   pipx install git+https://github.com/trsdn/markitdown-mcp.git && \
-   pipx inject markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber
+   pipx install trsdn-markitdown-mcp && \
+   pipx inject trsdn-markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber
    ```
 
 2. **Add to your Claude Desktop config:**
@@ -114,22 +128,34 @@ Convert all supported files in a directory.
 
 ## Installation
 
-### Option 1: Pip Install (Recommended)
+> Published on PyPI as **`trsdn-markitdown-mcp`** — not to be confused with Microsoft's `markitdown-mcp`.
+
+### Option 1: Install from PyPI (Recommended)
 
 ```bash
-# Install from local directory
-pip install -e /Users/torstenmahr/GitHub/markitdown-mcp
+# Isolated install with pipx
+pipx install trsdn-markitdown-mcp
 
-# Or navigate to the directory first
-cd /Users/torstenmahr/GitHub/markitdown-mcp
-pip install -e .
+# Or with pip
+pip install trsdn-markitdown-mcp
+
+# Or run without installing (uv)
+uvx trsdn-markitdown-mcp
 ```
 
-### Option 2: Direct Usage
+### Option 2: Install from source (development)
 
 ```bash
-cd /Users/torstenmahr/GitHub/markitdown-mcp
-source venv/bin/activate
+git clone https://github.com/trsdn/markitdown-mcp.git
+cd markitdown-mcp
+pip install -e ".[all]"
+```
+
+### Option 3: Direct usage from a checkout
+
+```bash
+cd markitdown-mcp
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -137,15 +163,14 @@ pip install -r requirements.txt
 
 ### MCP Server Mode (Recommended)
 
-After pip installation:
+After installation:
 ```bash
 # Start the MCP server (for use with MCP clients)
 markitdown-mcp
-```
 
-Or using the development script:
-```bash
-python run_server.py
+# Equivalent alternatives
+trsdn-markitdown-mcp
+python -m markitdown_mcp
 ```
 
 ## 🛠️ Installation Options
@@ -154,8 +179,8 @@ python run_server.py
 Install with ALL dependencies in one command:
 ```bash
 # Using pipx (recommended)
-pipx install git+https://github.com/trsdn/markitdown-mcp.git && \
-pipx inject markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber pytesseract pydub speechrecognition
+pipx install trsdn-markitdown-mcp && \
+pipx inject trsdn-markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber pytesseract pydub speechrecognition
 
 # Or download and run the install script
 curl -sSL https://raw.githubusercontent.com/trsdn/markitdown-mcp/main/scripts/install-all-deps.sh | bash
@@ -163,7 +188,7 @@ curl -sSL https://raw.githubusercontent.com/trsdn/markitdown-mcp/main/scripts/in
 
 ### Quick Install (Basic Features Only)
 ```bash
-pip install -e git+https://github.com/trsdn/markitdown-mcp.git
+pip install trsdn-markitdown-mcp
 ```
 
 ### Complete Install with All Dependencies (Step by Step)
@@ -173,12 +198,12 @@ To ensure all file formats are supported, use one of these methods:
 #### Method 1: Using pipx (Recommended)
 ```bash
 # Install the MCP server
-pipx install git+https://github.com/trsdn/markitdown-mcp.git
+pipx install trsdn-markitdown-mcp
 
 # Install all required dependencies for full functionality
-pipx inject markitdown-mcp 'markitdown[all]'         # PDF, OCR, Speech
-pipx inject markitdown-mcp openpyxl xlrd pandas      # Excel support
-pipx inject markitdown-mcp pymupdf pdfplumber        # Advanced PDF
+pipx inject trsdn-markitdown-mcp 'markitdown[all]'         # PDF, OCR, Speech
+pipx inject trsdn-markitdown-mcp openpyxl xlrd pandas      # Excel support
+pipx inject trsdn-markitdown-mcp pymupdf pdfplumber        # Advanced PDF
 ```
 
 #### Method 2: Using pip with virtual environment
@@ -200,14 +225,14 @@ If you already have the MCP server installed but some formats aren't working:
 which markitdown-mcp  # Shows path like /Users/you/.local/bin/markitdown-mcp
 
 # Inject missing dependencies
-pipx inject markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber
+pipx inject trsdn-markitdown-mcp 'markitdown[all]' openpyxl xlrd pandas pymupdf pdfplumber
 ```
 
 ### Verify Installation
-After installation, verify all dependencies are properly installed:
+After installation, verify the server responds to MCP requests:
 ```bash
-# Test the MCP server
-markitdown-mcp --help
+# Ask the server for its tool list over stdio (JSON-RPC)
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | markitdown-mcp
 
 # For pipx installations, check injected packages
 pipx list --include-injected
@@ -223,6 +248,20 @@ Add this to your Claude Desktop `claude_desktop_config.json`:
     "markitdown": {
       "command": "markitdown-mcp",
       "args": []
+    }
+  }
+}
+```
+
+Prefer running it without a permanent install? Use `uvx` (the package name is
+`trsdn-markitdown-mcp`, the command is `markitdown-mcp`):
+
+```json
+{
+  "mcpServers": {
+    "markitdown": {
+      "command": "uvx",
+      "args": ["trsdn-markitdown-mcp"]
     }
   }
 }
@@ -326,7 +365,6 @@ Convert all supported files in a directory.
 markitdown-mcp/
 ├── mcp_server.py        # MCP protocol server
 ├── mdconvert.py         # CLI script
-├── run_server.py        # Server runner script
 ├── mcp_config.json      # MCP configuration
 ├── requirements.txt     # Python dependencies
 ├── README.md           # This file

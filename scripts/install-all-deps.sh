@@ -17,7 +17,7 @@ fi
 
 # Install or reinstall the MCP server
 echo "📦 Installing MarkItDown MCP Server..."
-pipx install --force git+https://github.com/trsdn/markitdown-mcp.git
+pipx install --force trsdn-markitdown-mcp
 
 # Install all required dependencies
 echo ""
@@ -25,19 +25,19 @@ echo "💉 Injecting all required dependencies..."
 
 # Core MarkItDown dependencies
 echo "  → Installing PDF, OCR, and Speech dependencies..."
-pipx inject markitdown-mcp 'markitdown[all]' --force
+pipx inject trsdn-markitdown-mcp 'markitdown[all]' --force
 
 # Excel support
 echo "  → Installing Excel support..."
-pipx inject markitdown-mcp openpyxl xlrd pandas tabulate --force
+pipx inject trsdn-markitdown-mcp openpyxl xlrd pandas tabulate --force
 
 # Advanced PDF support
 echo "  → Installing advanced PDF support..."
-pipx inject markitdown-mcp pymupdf pdfplumber pytesseract --force
+pipx inject trsdn-markitdown-mcp pymupdf pdfplumber pytesseract --force
 
 # Audio/video support
 echo "  → Installing audio processing support..."
-pipx inject markitdown-mcp pydub speechrecognition --force
+pipx inject trsdn-markitdown-mcp pydub speechrecognition --force
 
 echo ""
 echo "✅ Installation complete!"

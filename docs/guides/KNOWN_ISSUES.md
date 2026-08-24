@@ -35,7 +35,7 @@ PptxConverter threw BadZipFile...
 **Solution**: Install the required dependencies using pipx:
 
 ```bash
-pipx inject markitdown-mcp openpyxl xlrd pandas tabulate
+pipx inject trsdn-markitdown-mcp openpyxl xlrd pandas tabulate
 ```
 
 ## Corrupted Office Files
