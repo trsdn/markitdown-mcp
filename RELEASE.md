@@ -1,6 +1,11 @@
 # Release Process
 
-This document outlines the release process for markitdown-mcp.
+This document outlines the release process for `trsdn-markitdown-mcp`.
+
+> **Naming**: the PyPI distribution is `trsdn-markitdown-mcp`. The Python import package
+> stays `markitdown_mcp` and the CLI command stays `markitdown-mcp` (with a
+> `trsdn-markitdown-mcp` alias). This project is **not** Microsoft's official
+> `markitdown-mcp` package.
 
 ## Version Numbering
 
@@ -20,13 +25,38 @@ We follow [Semantic Versioning](https://semver.org/):
    - Include all changes, fixes, and new features
 
 3. **Create Release**
-   - Tag the release: `git tag -a v1.0.0 -m "Release v1.0.0"`
-   - Push tags: `git push origin --tags`
+   - Tag the release: `git tag -a v1.2.3 -m "Release v1.2.3"`
+   - Push tags: `git push origin v1.2.3`
 
-4. **Publish to PyPI**
-   - Build: `python -m build`
-   - Upload: `python -m twine upload dist/*`
+4. **Automated Publish**
+   - `.github/workflows/release.yml` builds the sdist + wheel, runs `twine check`,
+     smoke-tests the wheel, and publishes to PyPI.
 
-## Automated Releases
+## PyPI Trusted Publishing (OIDC)
 
-GitHub Actions automatically publishes to PyPI when a new tag is pushed.
+Releases are published with [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/).
+**No API tokens or secrets are stored in this repository.**
+
+The PyPI publisher configuration must match exactly:
+
+| Setting | Value |
+|---------|-------|
+| PyPI project | `trsdn-markitdown-mcp` |
+| Owner / repository | `trsdn/markitdown-mcp` |
+| Workflow file | `release.yml` |
+| Environment | `pypi` |
+
+The `publish` job therefore declares `environment: pypi` and
+`permissions: { id-token: write }`. Changing the workflow filename, the job's
+environment, or the repository slug will break OIDC authentication.
+
+### Local dry run
+
+```bash
+python -m pip install --upgrade build twine
+python -m build
+twine check dist/*
+```
+
+Never run `twine upload` manually — publishing happens only through the tagged
+release workflow.

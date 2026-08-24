@@ -83,11 +83,11 @@ Installation
 
 Install via pip::
 
-   pip install markitdown-mcp
+   pip install trsdn-markitdown-mcp
 
 Or with all optional dependencies::
 
-   pip install markitdown-mcp[all]
+   pip install trsdn-markitdown-mcp[all]
 
 Quick Example
 -------------

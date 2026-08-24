@@ -1,29 +1,39 @@
 [build-system]
 requires = [
-    "setuptools>=61.0",
+    "setuptools>=77.0",
     "wheel",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "markitdown-mcp"
+name = "trsdn-markitdown-mcp"
 version = "1.2.2"
-description = "A Model Context Protocol server for converting documents to Markdown using MarkItDown"
+description = "An independent Model Context Protocol (MCP) server for converting documents to Markdown using MarkItDown"
 authors = [
-    { name = "MarkItDown MCP", email = "noreply@example.com" },
+    { name = "trsdn", email = "noreply@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "trsdn", email = "noreply@users.noreply.github.com" },
 ]
 readme = "README.md"
+license = "MIT"
+license-files = [
+    "LICENSE",
+]
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 4 - Beta",
+    "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Text Processing :: Markup :: Markdown",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 keywords = [
     "mcp",
@@ -31,6 +41,10 @@ keywords = [
     "markdown",
     "document-conversion",
     "model-context-protocol",
+    "pdf",
+    "docx",
+    "ocr",
+    "llm",
 ]
 dependencies = [
     "markitdown>=0.1.0",
@@ -41,9 +55,6 @@ dependencies = [
     "pdf2image>=1.16.3",
     "python-dotenv>=1.0.0",
 ]
-
-[project.license]
-text = "MIT"
 
 [project.optional-dependencies]
 all = [
@@ -92,11 +103,14 @@ docs = [
 
 [project.urls]
 Homepage = "https://github.com/trsdn/markitdown-mcp"
+Documentation = "https://github.com/trsdn/markitdown-mcp#readme"
 Repository = "https://github.com/trsdn/markitdown-mcp"
 Issues = "https://github.com/trsdn/markitdown-mcp/issues"
+Changelog = "https://github.com/trsdn/markitdown-mcp/blob/main/CHANGELOG.md"
 
 [project.scripts]
 markitdown-mcp = "markitdown_mcp.server:main"
+trsdn-markitdown-mcp = "markitdown_mcp.server:main"
 
 [tool.setuptools.packages.find]
 where = [

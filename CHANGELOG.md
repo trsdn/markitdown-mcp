@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Renamed the PyPI distribution to `trsdn-markitdown-mcp`** (the name `markitdown-mcp`
+  is taken by Microsoft's official project). The import package (`markitdown_mcp`) and the
+  `markitdown-mcp` console command are unchanged.
+- Release workflow now publishes via PyPI Trusted Publishing (OIDC, `environment: pypi`)
+  instead of API tokens.
+- `MANIFEST.in` prunes tests, docs, examples, scripts and schemas from the published
+  sdist.
+
+### Added
+- `trsdn-markitdown-mcp` console-script alias and `python -m markitdown_mcp` support.
+- Packaging metadata: SPDX `license`, `license-files`, maintainers, extra classifiers,
+  keywords and project URLs.
+
 ## [1.2.2] - 2026-06-10
 
 ### Fixed
