@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- CI: removed the `paths:` filter from the `pull_request` trigger of `ci-gates.yml` and
+  `fast-tests.yml`. These workflows provide the required status checks `Unit Tests &
+  Coverage`, `Integration Smoke Tests` and `Quick Security Scan`; with a path filter they
+  never ran on PRs without matching files (docs- or YAML-only, e.g. the automated
+  `docs/changelog-v*` release PRs), so those checks never reported and the PRs stayed
+  blocked indefinitely.
 - Release workflow: `post-release-validation` now sets `GH_REPO` for the step, so `gh`
   resolves the repository in a job without a checkout instead of failing the check with
   "GitHub release missing".
