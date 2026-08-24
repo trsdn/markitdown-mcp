@@ -3,11 +3,6 @@ name: CI Quality Gates
 on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-    paths:
-      - '**/*.py'
-      - 'pyproject.toml'
-      - 'requirements*.txt'
-      - '.github/workflows/ci-gates.yml'
   push:
     branches: [main]
   workflow_dispatch:

@@ -3,11 +3,6 @@ name: Fast Tests
 on:
   pull_request:
     branches-ignore: [ci-cd-maintenance]
-    paths:
-      - '**/*.py'
-      - 'pyproject.toml'
-      - 'requirements*.txt'
-      - '.github/workflows/fast-tests.yml'
   push:
     branches: [main]
   workflow_dispatch:
