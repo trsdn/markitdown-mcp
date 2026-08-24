@@ -29,8 +29,13 @@ We follow [Semantic Versioning](https://semver.org/):
    - Push tags: `git push origin v1.2.3`
 
 4. **Automated Publish**
-   - `.github/workflows/release.yml` builds the sdist + wheel, runs `twine check`,
-     smoke-tests the wheel, and publishes to PyPI.
+   - `.github/workflows/release.yml` runs the full release chain:
+     `validate-release` → `quality-gates` (ruff/mypy/pytest on Python 3.10/3.11/3.12
+     plus MCP protocol validation) + `security-scan` (Bandit, dependency audit) →
+     `build-package` (build, `twine check`, entrypoint smoke test) →
+     `generate-changelog` → `publish` (PyPI) → `create-github-release` →
+     `update-docs` → `post-release-validation`.
+   - The GitHub release is created **after** the PyPI publish succeeds.
 
 ## PyPI Trusted Publishing (OIDC)
 
@@ -47,8 +52,10 @@ The PyPI publisher configuration must match exactly:
 | Environment | `pypi` |
 
 The `publish` job therefore declares `environment: pypi` and
-`permissions: { id-token: write }`. Changing the workflow filename, the job's
-environment, or the repository slug will break OIDC authentication.
+`permissions: { id-token: write }`. `id-token: write` is granted **only** to that job;
+the workflow-level default is `contents: read`, and `contents: write` is scoped to the
+jobs that create the release and push the changelog. Changing the workflow filename, the
+job's environment, or the repository slug will break OIDC authentication.
 
 ### Local dry run
 
