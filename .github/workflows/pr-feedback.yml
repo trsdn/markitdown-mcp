@@ -64,7 +64,12 @@ jobs:
           # ===================
           echo "### 🎨 Code Formatting" >> pr-feedback.md
           if ! ruff format --check . > format_output.txt 2>&1; then
-            format_issues=$(ruff format --check . 2>&1 | grep -c "would reformat" || echo "0")
+            # `grep -c` prints 0 AND exits 1 when nothing matches, so `|| echo "0"`
+            # produced the literal string "0\n0" and broke the arithmetic below.
+            # Recent ruff versions also report "N files would be reformatted", so
+            # parse the summary line instead of counting per-file markers.
+            format_issues=$(grep -oE '[0-9]+ files? would be reformatted' format_output.txt | grep -oE '^[0-9]+' | tail -1 || true)
+            format_issues=${format_issues:-1}
             echo "❌ **$format_issues file(s) need formatting**" >> pr-feedback.md
             echo "" >> pr-feedback.md
             echo "<details><summary>Click to see formatting issues</summary>" >> pr-feedback.md

@@ -105,7 +105,7 @@ def analyze_document(file_path):
     result = convert_file(file_path=file_path)
 
     # Step 2: Extract and analyze content
-    markdown_content = result['content'][0]['text']
+    markdown_content = result["content"][0]["text"]
 
     # Step 3: Provide analysis to user
     return analyze_markdown(markdown_content)
@@ -115,10 +115,7 @@ def analyze_document(file_path):
 ```python
 def process_document_folder(input_dir, output_dir):
     # Convert entire directory
-    result = convert_directory(
-        input_directory=input_dir,
-        output_directory=output_dir
-    )
+    result = convert_directory(input_directory=input_dir, output_directory=output_dir)
 
     # Report results to user
     return summarize_conversion_results(result)
@@ -174,10 +171,10 @@ convert_file("/etc/passwd")
 formats = list_supported_formats()
 if is_supported(file_path, formats):
     result = convert_file(file_path)
-    if result.get('error'):
-        handle_conversion_error(result['error'])
+    if result.get("error"):
+        handle_conversion_error(result["error"])
     else:
-        process_markdown(result['content'])
+        process_markdown(result["content"])
 ```
 
 ## 🔍 Troubleshooting Guide
@@ -271,13 +268,10 @@ class DocumentConverter:
 
     async def convert_and_analyze(self, file_path):
         # Convert document
-        result = await self.mcp.call_tool(
-            "convert_file",
-            {"file_path": file_path}
-        )
+        result = await self.mcp.call_tool("convert_file", {"file_path": file_path})
 
         # Extract content
-        markdown = result['content'][0]['text']
+        markdown = result["content"][0]["text"]
 
         # Perform analysis
         return self.analyze_content(markdown)
@@ -341,18 +335,18 @@ def analyze_version_impact(commits_since_last_release):
 
     Returns: 'major', 'minor', 'patch', or 'none'
     """
-    has_breaking = any('BREAKING CHANGE' in commit.body for commit in commits)
-    has_features = any(commit.type == 'feat' for commit in commits)
-    has_fixes = any(commit.type in ['fix', 'perf'] for commit in commits)
+    has_breaking = any("BREAKING CHANGE" in commit.body for commit in commits)
+    has_features = any(commit.type == "feat" for commit in commits)
+    has_fixes = any(commit.type in ["fix", "perf"] for commit in commits)
 
     if has_breaking:
-        return 'major'
+        return "major"
     elif has_features:
-        return 'minor'
+        return "minor"
     elif has_fixes:
-        return 'patch'
+        return "patch"
     else:
-        return 'none'
+        return "none"
 ```
 
 ### Release Readiness Validation
@@ -363,13 +357,13 @@ Before suggesting releases, AI agents should verify:
 def validate_release_readiness():
     """Check if codebase is ready for release."""
     checks = {
-        'format_check': run_ruff_format(),
-        'lint_check': run_ruff_lint(),
-        'type_check': run_mypy(),
-        'tests_pass': run_test_suite(),
-        'coverage_ok': check_coverage_threshold(),
-        'docs_updated': verify_documentation(),
-        'security_clean': run_security_scan()
+        "format_check": run_ruff_format(),
+        "lint_check": run_ruff_lint(),
+        "type_check": run_mypy(),
+        "tests_pass": run_test_suite(),
+        "coverage_ok": check_coverage_threshold(),
+        "docs_updated": verify_documentation(),
+        "security_clean": run_security_scan(),
     }
 
     failed_checks = [name for name, passed in checks.items() if not passed]
@@ -389,9 +383,9 @@ def generate_changelog_entry(commits, version):
     changelog = f"## [{version}] - {datetime.now().strftime('%Y-%m-%d')}\n\n"
 
     # Group commits by type
-    features = [c for c in commits if c.type == 'feat']
-    fixes = [c for c in commits if c.type == 'fix']
-    breaking = [c for c in commits if 'BREAKING CHANGE' in c.body]
+    features = [c for c in commits if c.type == "feat"]
+    fixes = [c for c in commits if c.type == "fix"]
+    breaking = [c for c in commits if "BREAKING CHANGE" in c.body]
 
     if breaking:
         changelog += "### ⚠️ BREAKING CHANGES\n"
@@ -435,7 +429,7 @@ async def suggest_release_if_needed():
     # Analyze version impact
     version_impact = analyze_version_impact(commits)
 
-    if version_impact == 'none':
+    if version_impact == "none":
         return "No release needed - no significant changes"
 
     # Validate readiness
@@ -451,11 +445,11 @@ async def suggest_release_if_needed():
     changelog = generate_changelog_entry(commits, new_version)
 
     return {
-        'action': 'suggest_release',
-        'version': new_version,
-        'changelog': changelog,
-        'commits_included': len(commits),
-        'impact': version_impact
+        "action": "suggest_release",
+        "version": new_version,
+        "changelog": changelog,
+        "commits_included": len(commits),
+        "impact": version_impact,
     }
 ```
 
@@ -467,20 +461,20 @@ AI agents should communicate release information clearly:
 def format_release_summary(release_info):
     """Format release information for users."""
     return f"""
-🚀 **Release Suggestion: v{release_info['version']}**
+🚀 **Release Suggestion: v{release_info["version"]}**
 
-**Impact**: {release_info['impact'].title()} version bump
-**Changes**: {release_info['commits_included']} commits included
-**Type**: {'🔥 Breaking changes' if release_info['impact'] == 'major' else '✨ New features' if release_info['impact'] == 'minor' else '🐛 Bug fixes'}
+**Impact**: {release_info["impact"].title()} version bump
+**Changes**: {release_info["commits_included"]} commits included
+**Type**: {"🔥 Breaking changes" if release_info["impact"] == "major" else "✨ New features" if release_info["impact"] == "minor" else "🐛 Bug fixes"}
 
 **Changelog Preview**:
-{release_info['changelog'][:500]}...
+{release_info["changelog"][:500]}...
 
 **Next Steps**:
 1. Review the proposed changes
 2. Run final quality checks
-3. Create release tag: `git tag v{release_info['version']}`
-4. Push tag to trigger automated release: `git push origin v{release_info['version']}`
+3. Create release tag: `git tag v{release_info["version"]}`
+4. Push tag to trigger automated release: `git push origin v{release_info["version"]}`
 """
 ```
 
@@ -496,7 +490,7 @@ For critical security issues, AI agents should:
 ```python
 def detect_emergency_release(commits):
     """Detect if commits contain critical security fixes."""
-    security_keywords = ['security', 'vulnerability', 'cve', 'exploit', 'xss', 'injection']
+    security_keywords = ["security", "vulnerability", "cve", "exploit", "xss", "injection"]
 
     for commit in commits:
         commit_text = f"{commit.description} {commit.body}".lower()
@@ -670,18 +664,15 @@ def create_new_workflow(name, triggers, jobs):
     """Template for creating new GitHub Actions workflows."""
 
     workflow = {
-        'name': name,
-        'on': triggers,
-        'permissions': {
-            'contents': 'read',
-            'pull-requests': 'write'
-        },
-        'jobs': jobs
+        "name": name,
+        "on": triggers,
+        "permissions": {"contents": "read", "pull-requests": "write"},
+        "jobs": jobs,
     }
 
     # Validate before writing
     yaml_content = yaml.dump(workflow, default_flow_style=False)
-    return safe_workflow_update(f'.github/workflows/{name.lower()}.yml', yaml_content)
+    return safe_workflow_update(f".github/workflows/{name.lower()}.yml", yaml_content)
 ```
 
 **Updating existing workflow**:
@@ -690,7 +681,7 @@ def update_workflow_safely(file_path, updates):
     """Safely update existing workflow with changes."""
 
     # Read current workflow
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         workflow = yaml.safe_load(f)
 
     # Apply updates

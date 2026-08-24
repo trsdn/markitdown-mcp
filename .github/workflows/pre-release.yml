@@ -170,7 +170,7 @@ jobs:
               changelog.append('')
 
           changelog.append('### 🧪 Testing')
-          changelog.append('- Install: \`pip install markitdown-mcp==$VERSION\`')
+          changelog.append('- Install: \`pip install trsdn-markitdown-mcp==$VERSION\`')
           changelog.append('- Feedback: Report issues in GitHub with pre-release label')
           changelog.append('')
 
@@ -345,7 +345,7 @@ jobs:
           # Install from Test PyPI
           pip install --index-url https://test.pypi.org/simple/ \
                      --extra-index-url https://pypi.org/simple/ \
-                     markitdown-mcp==$VERSION
+                     trsdn-markitdown-mcp==$VERSION
 
           # Test basic functionality
           python -c "
@@ -383,7 +383,7 @@ jobs:
           This is a pre-release version for testing purposes.
 
           🧪 **Testing Instructions:**
-          - Install: pip install markitdown-mcp==${{ needs.prepare-prerelease.outputs.version }}
+          - Install: pip install trsdn-markitdown-mcp==${{ needs.prepare-prerelease.outputs.version }}
           - Test your workflows with this version
           - Report any issues with the 'pre-release' label
 
@@ -404,7 +404,7 @@ jobs:
 
           ### Installation
           ```bash
-          pip install markitdown-mcp==$VERSION
+          pip install trsdn-markitdown-mcp==$VERSION
           ```
 
           ### Testing Checklist
@@ -453,7 +453,7 @@ jobs:
           VERSION="${{ needs.prepare-prerelease.outputs.version }}"
 
           # Install from PyPI
-          pip install markitdown-mcp==$VERSION
+          pip install trsdn-markitdown-mcp==$VERSION
 
           # Comprehensive functionality test
           python -c "
@@ -498,7 +498,7 @@ jobs:
           echo ""
           echo "📦 **Version**: $TAG"
           echo "🔗 **Release**: https://github.com/${{ github.repository }}/releases/tag/$TAG"
-          echo "📥 **Install**: pip install markitdown-mcp==$VERSION"
+          echo "📥 **Install**: pip install trsdn-markitdown-mcp==$VERSION"
           echo ""
 
           if [[ "${{ needs.create-prerelease.result }}" == "success" ]]; then
