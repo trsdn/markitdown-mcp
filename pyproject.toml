@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trsdn-markitdown-mcp"
-version = "1.2.2"
+version = "2.0.0"
 description = "An independent Model Context Protocol (MCP) server for converting documents to Markdown using MarkItDown"
 authors = [
     { name = "trsdn", email = "noreply@users.noreply.github.com" },
