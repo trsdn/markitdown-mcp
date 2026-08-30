@@ -2,23 +2,21 @@
 
 This document contains visual representations of the CI/CD system architecture and workflow flows.
 
-## Overall System Architecture
+## Overall Tiered System Architecture
 
 ```mermaid
 graph TB
-    subgraph "Development Phase"
-        A[Developer Push/PR] --> B[Fast Tests]
-        A --> C[CI Quality Gates]
-        A --> D[Security Scan]
-        A --> E[Test Suite]
-
-        B --> F{All Checks Pass?}
-        C --> F
-        D --> F
-        E --> F
+    subgraph "Tier 1: Required PR Gates"
+        A[Developer PR / Push] --> C[CI Quality Gates]
+        C --> F{All CI Gates Passed?}
     end
 
-    subgraph "Quality Gates"
+    subgraph "Tier 2: Comprehensive Matrix & Audits"
+        A --> D[Security Scan]
+        A --> E[Test Suite Matrix]
+    end
+
+    subgraph "Branch Protection Decision"
         F -->|Pass| G[Merge Approved]
         F -->|Fail| H[Block Merge]
 
@@ -45,7 +43,6 @@ graph TB
         U --> V[Deploy Docs]
     end
 
-    style B fill:#e1f5fe
     style C fill:#e8f5e8
     style D fill:#fff3e0
     style E fill:#f3e5f5
