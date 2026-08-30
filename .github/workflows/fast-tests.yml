@@ -1,16 +1,9 @@
 name: Fast Tests
 
 on:
-  # NOTE: Deliberately no `paths:` filter here. This workflow provides the
-  # required status checks "Integration Smoke Tests" and "Quick Security Scan"
-  # on `main`. A path filter would prevent the workflow from running on PRs that
-  # touch no matching files (e.g. docs-only or YAML-only PRs), so those required
-  # checks would never report and the PR would stay blocked forever waiting on
-  # statuses that never arrive.
-  pull_request:
-    branches-ignore: [ci-cd-maintenance]
-  push:
-    branches: [main]
+  # Manual trigger for quick standalone smoke tests & flaky test detection.
+  # Automated PR validation is handled by 'CI Quality Gates' (ci-gates.yml)
+  # to prevent duplicate test runs and runner contention on PRs.
   workflow_dispatch:
 
 permissions:

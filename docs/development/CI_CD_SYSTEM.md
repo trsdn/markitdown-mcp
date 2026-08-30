@@ -23,23 +23,21 @@ This document provides a comprehensive overview of the CI/CD system for the Mark
 
 ## System Overview
 
-The CI/CD system is built on GitHub Actions and consists of 17 specialized workflows that handle different aspects of the development lifecycle:
+The CI/CD system is built on GitHub Actions and uses a structured 4-tier architecture designed for fast PR feedback, zero-deadlock branch protection, and comprehensive release automation:
 
 ```mermaid
 graph TB
-    A[Code Push/PR] --> B{Trigger Analysis}
-    B --> C[Fast Tests]
-    B --> D[CI Quality Gates]
-    B --> E[Security Scan]
-    B --> F[Documentation CI]
+    A[Code Push/PR] --> B{Tier 1: Required Gates}
+    B --> C[CI Quality Gates]
 
     C --> G{All Gates Pass?}
-    D --> G
-    E --> G
-    F --> G
 
     G -->|Yes| H[Merge to Main]
     G -->|No| I[Block Merge]
+
+    A --> D[Tier 2: Matrix & Deep Scans]
+    D --> E[Test Suite Matrix]
+    D --> F[Security & Docs CI]
 
     H --> J[Version Analysis]
     J --> K{Needs Release?}
@@ -53,51 +51,34 @@ graph TB
     Q --> R[PyPI Publication]
 ```
 
-## Workflow Architecture
+## Workflow Architecture & Tiering
 
-### 1. **Development Phase Workflows**
-
-These run on every PR and push to main:
-
-#### **Fast Tests** (`fast-tests.yml`)
-- **Purpose**: Quick validation for immediate feedback
-- **Triggers**: PR (Python files), Push to main
-- **Runtime**: ~2-3 minutes
+### 1. **Tier 1: Required PR Quality Gates (`ci-gates.yml`)**
+- **Purpose**: Fast, required enforcement blocking PR merges without deadlocks
+- **Triggers**: All PRs, Push to main, `workflow_dispatch` (no path filters to ensure required status checks always report)
+- **Runtime**: ~1-2 minutes
 - **Components**:
-  - Unit tests with timeout protection (30s per test)
-  - Integration smoke tests (60s timeout)
-  - Flaky test detection
-  - Quick security scan
-  - Server startup validation
+  - Code formatting & linting (`ruff format`, `ruff check`)
+  - Strict type checking (`mypy markitdown_mcp`)
+  - Unit tests with coverage verification (80% minimum)
+  - MCP protocol contract validation & schema check
+  - Dependency vulnerability scan (`pip-audit`)
+  - Aggregated required check (`All CI Gates Passed`)
 
-```yaml
-Triggers:
-  - pull_request: ['**.py', 'pyproject.toml', 'requirements*.txt']
-  - push: [main]
-  - workflow_dispatch
+### 2. **Tier 2: Comprehensive Test Matrix & Deep Scans**
+- **Purpose**: Cross-platform OS x Python version matrix and in-depth security audits
+- **Workflows**:
+  - `test.yml`: Runs tests across OS (Ubuntu, Windows, macOS) and Python (3.10-3.13) matrix, plus Package Build & Install test (`python -m build && pip install dist/*.whl`)
+  - `security.yml`: Full history credential scan (GitLeaks), Bandit security linter, dependency safety audit
+  - `fast-tests.yml`: Available on `workflow_dispatch` for fast standalone testing & flaky test detection
 
-Jobs:
-  ├── unit-tests-fast          # Fast unit tests (-m "not slow")
-  ├── integration-smoke        # MCP protocol smoke tests
-  ├── flaky-detection         # Detect unreliable tests
-  ├── security-quick          # Bandit high-severity scan
-  └── fast-tests-summary      # Results aggregation
-```
+### 3. **Tier 3: PR Feedback & Annotation Tooling**
+- **Purpose**: Informational feedback and developer annotations
+- **Workflows**: `code-annotations.yml`, `pr-feedback.yml`, `pr-summary.yml`
 
-#### **CI Quality Gates** (`ci-gates.yml`)
-- **Purpose**: Comprehensive code quality enforcement
-- **Triggers**: PR, Push to main/develop
-- **Runtime**: ~3-5 minutes
-- **Components**:
-  - Code formatting (ruff format)
-  - Linting (ruff check)
-  - Type checking (mypy)
-  - Unit test coverage (80% minimum)
-  - MCP protocol contract validation
-  - Dependency security audit
-
-```yaml
-Triggers:
+### 4. **Tier 4: Release & Maintenance Workflows**
+- **Purpose**: Automated releases, version bumps, and repo hygiene
+- **Workflows**: `version-bump.yml`, `release.yml`, `pre-release.yml`, `ci-cd-maintenance.yml`
   - pull_request
   - push: [main, develop]
   - workflow_dispatch
