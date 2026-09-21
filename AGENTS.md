@@ -7,6 +7,11 @@ This guide provides comprehensive information for AI agents and assistants on ho
 Read this section before changing anything here. The rest of this file is a usage guide for agents that call the
 server; this section is for agents that change its code.
 
+### What this repository is
+
+An MCP server, published on PyPI as `trsdn-markitdown-mcp`, that converts documents to Markdown for MCP clients such as
+Claude Desktop. A change to a tool name or schema breaks every client that calls it.
+
 ### Layout
 
 | Path | Purpose |
