@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/trsdn-markitdown-mcp)](pyproject.toml)
 [![CI](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml/badge.svg?branch=main)](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml)
 [![PyPI](https://img.shields.io/pypi/v/trsdn-markitdown-mcp.svg)](https://pypi.org/project/trsdn-markitdown-mcp/)
-[![Conformance](https://raw.githubusercontent.com/trsdn/markitdown-mcp/main/.github/badges/conformance.svg)](docs/self-assessment.md)
+[![Conformance](.github/badges/conformance.svg)](docs/self-assessment.md)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-MCP-blue)](https://modelcontextprotocol.io)
 
 A powerful **Model Context Protocol (MCP) server** that converts 29+ file formats to clean, structured Markdown using Microsoft's MarkItDown library.
