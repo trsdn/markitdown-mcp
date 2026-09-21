@@ -292,13 +292,56 @@ jobs:
           "
 
   # ==========================================
+  # Jobs whose names are required checks on `main`
+  # ==========================================
+  # `fast-tests.yml` used to report these two names on pull requests and is now
+  # manual-only, so branch protection waited for checks that never ran. They live
+  # here so the required names report again.
+  integration-smoke:
+    name: Integration Smoke Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-asyncio pytest-timeout
+
+      - name: Run MCP smoke tests
+        run: pytest tests/integration/test_mcp_protocol_smoke.py -v --tb=short --timeout=60
+
+  security-quick:
+    name: Quick Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Bandit, fail on high severity
+        run: |
+          pip install --upgrade pip bandit
+          bandit -r markitdown_mcp/ --severity-level high
+
+  # ==========================================
   # PR Summary Comment
   # ==========================================
   pr-summary:
     name: PR Summary
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks]
+    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks, integration-smoke, security-quick]
     steps:
       - uses: actions/checkout@v4
 
@@ -322,7 +365,9 @@ jobs:
           if [[ "${{ needs.quality-checks.result }}" != "success" || \
                 "${{ needs.unit-tests-coverage.result }}" != "success" || \
                 "${{ needs.mcp-contract-checks.result }}" != "success" || \
-                "${{ needs.dependency-checks.result }}" != "success" ]]; then
+                "${{ needs.dependency-checks.result }}" != "success" || \
+                "${{ needs.integration-smoke.result }}" != "success" || \
+                "${{ needs.security-quick.result }}" != "success" ]]; then
             overall_status="❌ Issues Found"
           fi
 
@@ -378,7 +423,7 @@ jobs:
   ci-gates-passed:
     name: All CI Gates Passed
     runs-on: ubuntu-latest
-    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks]
+    needs: [quality-checks, unit-tests-coverage, mcp-contract-checks, dependency-checks, integration-smoke, security-quick]
     if: always()
     steps:
       - name: Check all gates passed
