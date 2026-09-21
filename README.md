@@ -4,6 +4,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/trsdn-markitdown-mcp)](pyproject.toml)
 [![CI](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml/badge.svg?branch=main)](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml)
 [![PyPI](https://img.shields.io/pypi/v/trsdn-markitdown-mcp.svg)](https://pypi.org/project/trsdn-markitdown-mcp/)
+[![Conformance](.github/badges/conformance.svg)](docs/self-assessment.md)
 [![MCP](https://img.shields.io/badge/Model_Context_Protocol-MCP-blue)](https://modelcontextprotocol.io)
 
 A powerful **Model Context Protocol (MCP) server** that converts 29+ file formats to clean, structured Markdown using Microsoft's MarkItDown library.
@@ -446,9 +447,32 @@ markitdown-mcp  # Test the server works
 - **[Testing Strategy](docs/development/TESTING_STRATEGY.md)** - Testing approach and guidelines
 - **[Documentation](docs/)** - Complete documentation index
 
+## Project facts
+
+- **Status and maintenance**: beta, maintained by [@trsdn](https://github.com/trsdn). Report problems through
+  [issues](https://github.com/trsdn/markitdown-mcp/issues); security reports follow the
+  [security policy](https://github.com/trsdn/.github/blob/main/SECURITY.md).
+- **Language**: primary language English, English only. The server has no localized strings.
+- **Privacy**: the server reads only files it is asked to convert, from the safe directories it allows (the Documents, Downloads and Desktop folders in the home directory, temporary directories, the working directory, and `MARKITDOWN_SAFE_DIRS`), and
+  writes only to the output directory the caller names. It collects no data, sends no telemetry and contacts no network
+  service itself. The one exception is optional audio transcription: with the `all` extra installed, the
+  `speechrecognition` package sends the audio to Google's web speech recognition service. Nothing is retained after a
+  request beyond the files the caller asked to be written.
+- **Accessibility**: there is no graphical interface. The server speaks JSON-RPC over stdio and its log lines go to
+  standard error as plain text. No accessibility limitation is known.
+- **Third-party code**: this repository redistributes none. Dependencies are declared in `pyproject.toml` and resolved
+  by the installer when the package is installed.
+
 ## 📄 License
 
 MIT License - see LICENSE file for details.
+
+## Repository stats
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card-dark.svg">
+  <img alt="Repository statistics" src="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card.svg">
+</picture>
 
 ## 🔗 Related
 
