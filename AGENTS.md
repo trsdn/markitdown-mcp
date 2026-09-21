@@ -2,6 +2,58 @@
 
 This guide provides comprehensive information for AI agents and assistants on how to effectively use the MarkItDown MCP server for document conversion tasks.
 
+## Working in this repository
+
+Read this section before changing anything here. The rest of this file is a usage guide for agents that call the
+server; this section is for agents that change its code.
+
+### Layout
+
+| Path | Purpose |
+|---|---|
+| `markitdown_mcp/` | The server package: `server.py` holds the MCP tools and the `main` entry point |
+| `tests/` | Unit, integration, security, performance and compatibility tests |
+| `schemas/` | Generated tool schemas. Never hand-edit; regenerate with `python scripts/generate-schemas.py` |
+| `docs/` | Guides and API documentation. `docs/api/generated/` is produced by the documentation workflow |
+| `.github/workflows/` | CI, release and maintenance automation. See [`RELEASE.md`](RELEASE.md) for the release pipeline |
+
+### Validate before proposing a change
+
+Set up with `pip install -e ".[dev,test]"`, then run all of these; every one must pass:
+
+```sh
+ruff format --check . && ruff check . && mypy markitdown_mcp/
+pytest tests/unit/
+```
+
+The CI job `Unit Tests & Coverage` runs the same tests, and [`CONTRIBUTING.md`](CONTRIBUTING.md) describes the pull
+request rules. Python 3.10 or later is required and is declared in `pyproject.toml`.
+
+### Do not do these
+
+- Do not rewrite history, force push, or delete branches.
+- Do not commit secrets, tokens, or personal data. Push protection is enabled; a blocked push means stop and tell
+  the maintainer, not retry.
+- Do not create or move tags, publish to PyPI, or run the release workflow. A release is made from a tag by the
+  pipeline described in [`RELEASE.md`](RELEASE.md), and the maintainer starts it.
+- Do not change repository settings, branch protection, or the `pypi` environment. Those are maintainer actions.
+- Do not hand-edit `schemas/*.json` or anything under `docs/api/generated/`; change the source and regenerate.
+- Do not add a dependency without stating why in the pull request.
+- The server reads and writes files on the user's machine. Do not add a code path that reads outside the paths the
+  caller supplies, and do not run `convert_directory` against a directory you were not asked to convert.
+
+### Credentials
+
+The repository holds no long-lived credential. Publishing to PyPI uses trusted publishing from the `pypi`
+environment of `release.yml`, so there is no PyPI token to leak. If that trust is exposed, the maintainer removes
+the publisher on pypi.org and re-adds it. The only other secrets are `GITHUB_TOKEN`, which GitHub issues per run,
+and the optional `GITLEAKS_LICENSE`, which the maintainer replaces in the repository's secret settings.
+
+### Attribution
+
+Commits written by an agent carry a `Co-Authored-By` trailer naming the agent, and every change goes through a pull
+request that a person can review. Nothing is pushed straight to `main`.
+
 ## 🤖 Quick Reference for AI Agents
 
 ### Primary Use Cases
