@@ -1,0 +1,27 @@
+name: Repository stats
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * *"
+  push:
+    branches:
+      # Change this if the repository's default branch is not `main`.
+      - main
+    paths:
+      - .github/workflows/stats.yml
+
+permissions:
+  contents: write
+
+jobs:
+  stats:
+    uses: trsdn/.github/.github/workflows/repo-stats.yml@main
+    with:
+      branch: stats
+      output-dir: .github/stats
+      theme: both
+      cards: repo-card
+      commit-message: "chore(stats): update repository stats"
+    secrets:
+      STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
