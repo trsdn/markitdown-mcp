@@ -1,11 +1,10 @@
 # 📄 MarkItDown MCP Server
 
-[![MCP](https://img.shields.io/badge/Model_Context_Protocol-MCP-blue)](https://modelcontextprotocol.io)
+[![License](https://img.shields.io/github/license/trsdn/markitdown-mcp)](LICENSE)
+[![Python](https://img.shields.io/pypi/pyversions/trsdn-markitdown-mcp)](pyproject.toml)
+[![CI](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml/badge.svg?branch=main)](https://github.com/trsdn/markitdown-mcp/actions/workflows/ci-gates.yml)
 [![PyPI](https://img.shields.io/pypi/v/trsdn-markitdown-mcp.svg)](https://pypi.org/project/trsdn-markitdown-mcp/)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![CI](https://github.com/trsdn/markitdown-mcp/workflows/CI/badge.svg)](https://github.com/trsdn/markitdown-mcp/actions)
-[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
+[![MCP](https://img.shields.io/badge/Model_Context_Protocol-MCP-blue)](https://modelcontextprotocol.io)
 
 A powerful **Model Context Protocol (MCP) server** that converts 29+ file formats to clean, structured Markdown using Microsoft's MarkItDown library.
 
@@ -450,6 +449,13 @@ markitdown-mcp  # Test the server works
 ## 📄 License
 
 MIT License - see LICENSE file for details.
+
+## Repository stats
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card-dark.svg">
+  <img alt="Repository statistics" src="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card.svg">
+</picture>
 
 ## 🔗 Related
 

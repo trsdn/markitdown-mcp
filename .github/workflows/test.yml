@@ -23,6 +23,9 @@ on:
           - performance
           - security
 
+permissions:
+  contents: read
+
 # Cancel duplicate runs
 concurrency:
   group: test-${{ github.ref }}
@@ -115,7 +118,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457 # v3
         with:
           file: ./coverage.xml
           flags: unittests

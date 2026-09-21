@@ -10,6 +10,10 @@ on:
       - 'pyproject.toml'
       - 'requirements*.txt'
       - '.github/workflows/security.yml'
+permissions:
+  contents: read
+  pull-requests: read
+
 # Cancel duplicate runs
 concurrency:
   group: security-${{ github.ref }}
@@ -30,7 +34,7 @@ jobs:
           fetch-depth: 0  # Fetch full history for comprehensive scanning
 
       - name: Run GitLeaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional: for GitLeaks+ features
