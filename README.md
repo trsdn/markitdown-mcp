@@ -450,13 +450,6 @@ markitdown-mcp  # Test the server works
 
 MIT License - see LICENSE file for details.
 
-## Repository stats
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card-dark.svg">
-  <img alt="Repository statistics" src="https://raw.githubusercontent.com/trsdn/markitdown-mcp/stats/.github/stats/repo-card.svg">
-</picture>
-
 ## 🔗 Related
 
 - [Model Context Protocol](https://modelcontextprotocol.io)
