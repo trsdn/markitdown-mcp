@@ -180,7 +180,7 @@ jobs:
           "
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6
         with:
           branch: docs/auto-generate-api
           title: "📚 Auto-generate missing API documentation"
@@ -284,7 +284,7 @@ jobs:
 
       - name: Create issue for missing docs
         if: success()
-        uses: peter-evans/create-issue-from-file@v4
+        uses: peter-evans/create-issue-from-file@433e51abf769039ee20ba1293a088ca19d573b7f # v4
         with:
           title: "📚 Missing Documentation Report"
           content-filepath: docs/missing-docs-stubs.md
