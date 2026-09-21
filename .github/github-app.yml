@@ -1,0 +1,12 @@
+# Repository configuration for the GitHub Copilot app.
+#
+# The authoritative instructions for this repository are in AGENTS.md. This file
+# points at them rather than restating them, so the two cannot drift apart.
+
+instructions: |
+  Read AGENTS.md in the repository root and follow it, starting with the section
+  "Working in this repository". It is the authoritative guidance for this repository.
+
+scripts:
+  - name: Validate
+    command: ruff format --check . && ruff check . && mypy markitdown_mcp/ && pytest tests/unit/
