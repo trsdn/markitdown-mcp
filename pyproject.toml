@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trsdn-markitdown-mcp"
-version = "2.0.0"
+version = "1.2.3"
 description = "An independent Model Context Protocol (MCP) server for converting documents to Markdown using MarkItDown"
 authors = [
     { name = "trsdn", email = "noreply@users.noreply.github.com" },
@@ -199,11 +199,6 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.mypy]
-# No hardcoded `python_version`: the CI matrix runs mypy on 3.10/3.11/3.12 and
-# pinning it to 3.10 made mypy reject the 3.12-syntax numpy stubs that get
-# installed on newer interpreters ("Type statement is only supported in Python
-# 3.12 and greater"). Letting mypy use the running interpreter checks each
-# matrix entry against its own target version.
 strict = true
 warn_return_any = true
 warn_unused_configs = true
